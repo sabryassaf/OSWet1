@@ -2,7 +2,7 @@
 #define SMASH_COMMAND_H_
 
 #include <vector>
-
+#include <string>
 #define COMMAND_ARGS_MAX_LENGTH (200)
 #define COMMAND_MAX_ARGS (20)
 
@@ -10,7 +10,7 @@ class Command
 {
   // TODO: Add your data members
 public:
-  Command() {};
+  Command(){};
   Command(const char *cmd_line);
   virtual ~Command();
   virtual void execute() = 0;
@@ -22,29 +22,29 @@ public:
 class BuiltInCommand : public Command
 {
 public:
-  BuiltInCommand() {};
+  BuiltInCommand(){};
   BuiltInCommand(const char *cmd_line);
-  virtual ~BuiltInCommand() {}
+  virtual ~BuiltInCommand() {};
 };
 
 class ChprompotCommand : public BuiltInCommand
 {
 private:
   std::string prompt;
-  SmallShell * mainShell;
+
 public:
-  ChprompotCommand(std::string &promptNew,SmallShell * theShell)
+  ChprompotCommand(std::string &promptNew)
   {
     this->prompt = promptNew;
-    this->mainShell = theShell;
+    this->execute();
   }
-  ChprompotCommand(SmallShell * theShell){
-    this->prompt = string("chprompt");
-    this->mainShell = theShell;
+  ChprompotCommand()
+  {
+    this->prompt = "chprompt";
+    this->execute();
   }
-  virtual ~ChprompotCommand(){};
+  virtual ~ChprompotCommand() = default;
   void execute() override;
-
 };
 
 class ExternalCommand : public Command
@@ -161,7 +161,7 @@ class ChmodCommand : public BuiltInCommand
 {
 public:
   ChmodCommand(const char *cmd_line);
-  virtual ~ChmodCommand() {}
+  virtual ~ChmodCommand() = default; 
   void execute() override;
 };
 

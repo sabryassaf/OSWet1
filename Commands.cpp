@@ -85,7 +85,7 @@ void _removeBackgroundSign(char *cmd_line)
 
 // TODO: Add your implementation for classes in Commands.h
 
-SmallShell::SmallShell()
+SmallShell::SmallShell():prompt("chprompt")
 {
   // TODO: add your implementation
 }
@@ -113,9 +113,14 @@ commandInfo &paraseInput(const char *cmd_line)
   return words;
 }
 
+Command::~Command() {}
+
+
 void ChprompotCommand::execute(){
-  this->mainShell->setPrompt(this->prompt);
+  SmallShell::getInstance().setPrompt(this->prompt);
 }
+
+
 
 Command *SmallShell::CreateCommand(const char *cmd_line)
 {
@@ -124,7 +129,7 @@ Command *SmallShell::CreateCommand(const char *cmd_line)
   {
     if (commandline.size() >= 2)
     {
-      return new ChprompotCommand(commandline[1], this);
+      return new ChprompotCommand(commandline[1]);
     }
   }
   // For example:
