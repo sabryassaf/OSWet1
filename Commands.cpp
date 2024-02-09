@@ -98,20 +98,7 @@ SmallShell::~SmallShell()
 /**
  * Creates and returns a pointer to Command class which matches the given command line (cmd_line)
  */
-commandInfo &paraseInput(const char *cmd_line)
-{
-  std::string inputLine(cmd_line);
-  std::stringstream ss(inputLine);
-  std::vector<std::string> words;
-  std::string word;
 
-  while (ss >> word)
-  {
-    words.push_back(word);
-  }
-
-  return words;
-}
 
 Command::~Command() {}
 
@@ -120,17 +107,26 @@ void ChprompotCommand::execute(){
   SmallShell::getInstance().setPrompt(this->prompt);
 }
 
+commandInfo convertToVector(char** CommandLine) {
+    commandInfo result;
+    if (CommandLine == nullptr) {
+        return result; // Return empty vector if the input is nullptr
+    }
+    for (char** current = CommandLine; *current != nullptr; ++current) {
+        result.push_back(std::string(*current));
+    }
+    return result;
+}
 
 
 Command *SmallShell::CreateCommand(const char *cmd_line)
 {
-  commandInfo commandline = paraseInput(cmd_line);
-  if (commandline[0].compare("chprompt") == 0)
+  char ** CommandLine; 
+  int words = _parseCommandLine(cmd_line,CommandLine);
+  commandInfo commandVector = convertToVector(CommandLine);
+  if (commandVector[0].compare("chprompt") == 0)
   {
-    if (commandline.size() >= 2)
-    {
-      return new ChprompotCommand(commandline[1]);
-    }
+      return new ChprompotCommand(commandVector[1]);
   }
   // For example:
   /*
