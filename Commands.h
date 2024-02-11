@@ -26,7 +26,14 @@ public:
   BuiltInCommand(const char *cmd_line);
   virtual ~BuiltInCommand() {};
 };
-
+class ShowPidCommand : public BuiltInCommand{
+public:
+    ShowPidCommand(){
+        execute();
+    };
+    virtual ~ShowPidCommand() = default;
+    void execute() override;
+};
 class ChprompotCommand : public BuiltInCommand
 {
 private:
@@ -40,7 +47,7 @@ public:
   }
   ChprompotCommand()
   {
-    this->prompt = "chprompt";
+    this->prompt = "smash";
     this->execute();
   }
   virtual ~ChprompotCommand() = default;
@@ -91,13 +98,6 @@ public:
   void execute() override;
 };
 
-class ShowPidCommand : public BuiltInCommand
-{
-public:
-  ShowPidCommand(const char *cmd_line);
-  virtual ~ShowPidCommand() {}
-  void execute() override;
-};
 
 class JobsList;
 class QuitCommand : public BuiltInCommand
@@ -164,6 +164,17 @@ public:
   virtual ~ChmodCommand() = default; 
   void execute() override;
 };
+
+class pwdCommand : public BuiltInCommand{
+public:
+    pwdCommand(){
+        execute();
+    };
+    virtual ~pwdCommand() = default;
+    void execute() override;
+
+};
+
 
 class SmallShell
 {

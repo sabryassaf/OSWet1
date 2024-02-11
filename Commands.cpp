@@ -85,7 +85,7 @@ void _removeBackgroundSign(char *cmd_line)
 
 // TODO: Add your implementation for classes in Commands.h
 
-SmallShell::SmallShell():prompt("chprompt")
+SmallShell::SmallShell():prompt("smash")
 {
   // TODO: add your implementation
 }
@@ -118,7 +118,16 @@ commandInfo convertToVector(char** CommandLine) {
     return result;
 }
 
+void ShowPidCommand::execute() {
+    pid_t pid = getpid();
+    std::cout<<"smash pid is "<<pid<<endl;
+}
 
+void pwdCommand::execute() {
+    char* path = getcwd(NULL,0);
+    cout<<path<<endl;
+    free(path);
+}
 Command *SmallShell::CreateCommand(const char *cmd_line)
 {
   char ** CommandLine; 
@@ -126,7 +135,16 @@ Command *SmallShell::CreateCommand(const char *cmd_line)
   commandInfo commandVector = convertToVector(CommandLine);
   if (commandVector[0].compare("chprompt") == 0)
   {
+      if(commandVector.size() == 1){
+          return new ChprompotCommand();
+      }
       return new ChprompotCommand(commandVector[1]);
+  }
+  if(commandVector[0].compare("showpid") == 0){
+      return new ShowPidCommand();
+  }
+  if(commandVector[0].compare("pwd") == 0){
+      return new pwdCommand();
   }
   // For example:
   /*
@@ -153,7 +171,6 @@ void SmallShell::executeCommand(const char *cmd_line)
 {
 
   Command *cmd = CreateCommand(cmd_line);
-
   // TODO: Add your implementation here
   // for example:
   // Command* cmd = CreateCommand(cmd_line);
