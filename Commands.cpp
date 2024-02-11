@@ -7,6 +7,7 @@
 #include <iomanip>
 #include "Commands.h"
 
+#define MAX_ARGUMENTS 20
 using namespace std;
 typedef std::vector<std::string> commandInfo;
 const std::string WHITESPACE = " \n\r\t\f\v";
@@ -85,7 +86,7 @@ void _removeBackgroundSign(char *cmd_line)
 
 // TODO: Add your implementation for classes in Commands.h
 
-SmallShell::SmallShell():prompt("smash")
+SmallShell::SmallShell() : prompt("smash")
 {
   // TODO: add your implementation
 }
@@ -99,52 +100,79 @@ SmallShell::~SmallShell()
  * Creates and returns a pointer to Command class which matches the given command line (cmd_line)
  */
 
-
 Command::~Command() {}
 
-
-void ChprompotCommand::execute(){
+void ChprompotCommand::execute()
+{
   SmallShell::getInstance().setPrompt(this->prompt);
 }
 
-commandInfo convertToVector(char** CommandLine) {
-    commandInfo result;
-    if (CommandLine == nullptr) {
-        return result; // Return empty vector if the input is nullptr
-    }
-    for (char** current = CommandLine; *current != nullptr; ++current) {
-        result.push_back(std::string(*current));
-    }
-    return result;
+commandInfo convertToVector(char **CommandLine)
+{
+  commandInfo result;
+  if (CommandLine == nullptr)
+  {
+    return result; // Return empty vector if the input is nullptr
+  }
+  for (char **current = CommandLine; *current != nullptr; ++current)
+  {
+    result.push_back(std::string(*current));
+  }
+  return result;
 }
 
-void ShowPidCommand::execute() {
-    pid_t pid = getpid();
-    std::cout<<"smash pid is "<<pid<<endl;
+void ShowPidCommand::execute()
+{
+  pid_t pid = getpid();
+  std::cout << "smash pid is " << pid << endl;
 }
 
-void pwdCommand::execute() {
-    char* path = getcwd(NULL,0);
-    cout<<path<<endl;
-    free(path);
+void pwdCommand::execute()
+{
+  char *path = getcwd(NULL, 0);
+  cout << path << endl;
+  free(path);
 }
 Command *SmallShell::CreateCommand(const char *cmd_line)
 {
-  char ** CommandLine; 
-  int words = _parseCommandLine(cmd_line,CommandLine);
+  char *CommandLine[MAX_ARGUMENTS];
+  for (int i = 0; i < MAX_ARGUMENTS; ++i)
+  {
+    CommandLine[i] = nullptr;
+  }
+  int words = _parseCommandLine(cmd_line, CommandLine);
   commandInfo commandVector = convertToVector(CommandLine);
   if (commandVector[0].compare("chprompt") == 0)
   {
-      if(commandVector.size() == 1){
-          return new ChprompotCommand();
+    if (commandVector.size() == 1)
+    {
+      for (int i = 0; i < words; ++i)
+      {
+        free(CommandLine[i]);
       }
-      return new ChprompotCommand(commandVector[1]);
+      return new ChprompotCommand();
+    }
+    for (int i = 0; i < words; ++i)
+    {
+      free(CommandLine[i]);
+    }
+    return new ChprompotCommand(commandVector[1]);
   }
-  if(commandVector[0].compare("showpid") == 0){
-      return new ShowPidCommand();
+  if (commandVector[0].compare("showpid") == 0)
+  {
+    for (int i = 0; i < words; ++i)
+    {
+      free(CommandLine[i]);
+    }
+    return new ShowPidCommand();
   }
-  if(commandVector[0].compare("pwd") == 0){
-      return new pwdCommand();
+  if (commandVector[0].compare("pwd") == 0)
+  {
+    for (int i = 0; i < words; ++i)
+    {
+      free(CommandLine[i]);
+    }
+    return new pwdCommand();
   }
   // For example:
   /*
