@@ -10,6 +10,7 @@
 #define MAX_ARGUMENTS 20
 using namespace std;
 typedef std::vector<std::string> commandInfo;
+#define SMASH SmallShell::getInstance()
 const std::string WHITESPACE = " \n\r\t\f\v";
 
 #if 0
@@ -113,7 +114,7 @@ Command::~Command() {}
 
 void ChprompotCommand::execute()
 {
-  SmallShell::getInstance().setPrompt(this->prompt);
+  SMASH.setPrompt(this->prompt);
 }
 
 /// show Pid Command
@@ -133,11 +134,21 @@ void pwdCommand::execute()
 void CdCommand::execute()
 {
 
-  SmallShell::getInstance().setLastDirectory(this->newCdd);
+  SMASH.setLastDirectory(this->newCdd);
 }
 void JobsCommand::execute()
 {
-  SmallShell::getInstance().printCurrentJobs();
+  SMASH.printCurrentJobs();
+}
+// Jobs Command
+
+JobsCommand::JobsCommand(commandInfo &cmdInfoInput) : cmdInfo(cmdInfoInput)
+{
+}
+
+void JobsCommand::execute()
+{
+  SMASH.getJobList()->printJobsList();
 }
 // ForeGround Command
 
@@ -145,27 +156,26 @@ ForegroundCommand::ForegroundCommand(commandInfo &cmdInfo) : jobHolder(-1)
 {
   if (cmdInfo.size() == 1)
   {
-    if (SmallShell::getInstance().getJobList()->isEmpty())
+    if (SMASH.getJobList()->isEmpty())
     {
-      SmallShell::getInstance().smashError("fg: jobs list is empty");
+      SMASH.smashError("fg: jobs list is empty");
       return;
     }
-    jobHolder = SmallShell::getInstance().getJobList()->getLastJob()->getId();
+    jobHolder = SMASH.getJobList()->getLastJob()->getId();
     return;
   }
   if (cmdInfo.size() > 2 || !isInteger(cmdInfo[1]))
   {
-    SmallShell::getInstance().smashError("fg: invalid arguments");
+    SMASH.smashError("fg: invalid arguments");
     return;
   }
-  if (!SmallShell::getInstance().getJobList()->getJobById(std::stoi(cmdInfo[1])))
+  if (!SMASH.getJobList()->getJobById(std::stoi(cmdInfo[1])))
   {
     cout << "smash error: fg: job-id " << cmdInfo[1] << " does not exist";
     return;
   }
 
   jobHolder = std::stoi(cmdInfo[1]);
-  return;
 }
 
 void ForegroundCommand::execute()
@@ -175,9 +185,8 @@ void ForegroundCommand::execute()
     return;
   }
   int status;
-  int pid = SmallShell::getInstance().getJobList()->getJobById(jobHolder)->getPid();
+  int pid = SMASH.getJobList()->getJobById(jobHolder)->getPid();
   waitpid(pid, &status, 0);
-  return;
 }
 
 // Quit command
@@ -190,7 +199,7 @@ void QuitCommand::execute()
   {
     exit(0);
   }
-  auto temp = SmallShell::getInstance().getJobList()->getJobs();
+  auto temp = SMASH.getJobList()->getJobs();
   if (cmdInfo[1].compare("kill") == 0)
   {
     cout << "smash: sending SIGKILL signal to " << temp.size() << " jobs:" << endl;
@@ -204,6 +213,44 @@ void QuitCommand::execute()
   exit(0);
 }
 
+// Kill Command
+
+KillCommand::KillCommand(commandInfo &cmdInfoInput)
+{
+  this->cmdInfo = cmdInfoInput;
+}
+
+void KillCommand::execute()
+{
+  if (cmdInfo.size() <= 1 || cmdInfo.size() > 3 || !isInteger(cmdInfo[1]) || !isInteger(cmdInfo[2]))
+  {
+    SMASH.smashError("kill: invalid arguments");
+    return;
+  }
+  JobsList::JobEntry *tmp = SMASH.getJobList()->getJobById(std::stoi(cmdInfo[2]));
+  if (!tmp)
+  {
+    cout << "smash error: kill: job-id " << cmdInfo[2] << " does not exit" << endl;
+    return;
+  }
+  int pid = tmp->getPid();
+  int signal = -1 * std::stoi(cmdInfo[2]);
+  int rc = kill(pid, signal);
+  if (rc != 0)
+  {
+    perror("smash error: kill() failed");
+    return;
+  }
+  cout << "signal number " << cmdInfo[1] << " was sent to pid " << pid << endl;
+  if (signal == SIGSTOP)
+  {
+    tmp->stopJob();
+  }
+  else if (signal == SIGCONT)
+  {
+    tmp->contJob();
+  }
+}
 ///// smallShell functions
 SmallShell::SmallShell() : prompt("smash")
 {
@@ -291,10 +338,10 @@ Command *SmallShell::CreateCommand(const char *cmd_line)
       return new CdCommand(commandVector[1]);
     }
   }
-  // if (commandVector[0].compare("jobs") == 0)
-  // {
-  //   return new JobsCommand(commandVector);
-  // }
+  if (commandVector[0].compare("jobs") == 0)
+  {
+    return new JobsCommand(commandVector);
+  }
   if (commandVector[0].compare("fg") == 0)
   {
     return new ForegroundCommand(commandVector);
@@ -303,13 +350,16 @@ Command *SmallShell::CreateCommand(const char *cmd_line)
   {
     return new QuitCommand(commandVector);
   }
+  if (commandVector[0].compare("kill") == 0)
+  {
+    return new KillCommand(commandVector);
+  }
 
   return nullptr;
 }
 
 void SmallShell::executeCommand(const char *cmd_line)
 {
-
   Command *cmd = CreateCommand(cmd_line);
   cmd->execute();
   // Please note that you must fork smash process for some commands (e.g., external commands....)

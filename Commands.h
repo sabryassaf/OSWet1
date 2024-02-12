@@ -91,7 +91,6 @@ class ForegroundCommand : public BuiltInCommand
 {
 private:
   int jobHolder;
-
 public:
   ForegroundCommand(commandInfo &cmdInfo);
   virtual ~ForegroundCommand() {}
@@ -100,8 +99,10 @@ public:
 
 class JobsCommand : public BuiltInCommand
 {
+private:
+  commandInfo cmdInfo;
 public:
-  JobsCommand(){};
+  JobsCommand(commandInfo &cmdInfo);
   virtual ~JobsCommand() = default;
   void execute() override;
 };
@@ -120,6 +121,7 @@ public:
 class KillCommand : public BuiltInCommand
 {
 private:
+  commandInfo cmdInfo;
 public:
   KillCommand(commandInfo &cmdInfo);
   virtual ~KillCommand() {}
@@ -203,6 +205,10 @@ public:
     void stopJob()
     {
       finished = true;
+    }
+    void contJob()
+    {
+      finished = false;
     }
     bool isJobFinished()
     {
@@ -298,14 +304,7 @@ public:
   }
 };
 
-// class JobsCommand : public BuiltInCommand
-// {
-//   // TODO: Add your data members
-// public:
-//   JobsCommand(const char *cmd_line, JobsList *jobs);
-//   virtual ~JobsCommand() {}
-//   void execute() override;
-// };
+
 
 class ChmodCommand : public BuiltInCommand
 {
