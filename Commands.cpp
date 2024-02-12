@@ -22,7 +22,32 @@ const std::string WHITESPACE = " \n\r\t\f\v";
 #define FUNC_ENTRY()
 #define FUNC_EXIT()
 #endif
+// helper functions
+bool isInteger(const std::string &str)
+{
+  std::istringstream iss(str);
+  int number;
+  char leftover;
+  if ((iss >> number) && !(iss >> leftover))
+    return true; // Successfully read an int and nothing else
+  return false;
+}
 
+commandInfo convertToVector(char **CommandLine)
+{
+  commandInfo result;
+  if (CommandLine == nullptr)
+  {
+    return result; // Return empty vector if the input is nullptr
+  }
+  for (char **current = CommandLine; *current != nullptr; ++current)
+  {
+    result.push_back(std::string(*current));
+  }
+  return result;
+}
+
+//////// functions from the course
 string _ltrim(const std::string &s)
 {
   size_t start = s.find_first_not_of(WHITESPACE);
@@ -84,10 +109,107 @@ void _removeBackgroundSign(char *cmd_line)
   cmd_line[str.find_last_not_of(WHITESPACE, idx) + 1] = 0;
 }
 
+Command::~Command() {}
+
+void ChprompotCommand::execute()
+{
+  SmallShell::getInstance().setPrompt(this->prompt);
+}
+
+/// show Pid Command
+void ShowPidCommand::execute()
+{
+  pid_t pid = getpid();
+  std::cout << "smash pid is " << pid << endl;
+}
+/// Pwdcommand
+void pwdCommand::execute()
+{
+  char *path = getcwd(NULL, 0);
+  cout << path << endl;
+  free(path);
+}
+// cd command
+void CdCommand::execute()
+{
+
+  SmallShell::getInstance().setLastDirectory(this->newCdd);
+}
+void JobsCommand::execute()
+{
+  SmallShell::getInstance().printCurrentJobs();
+}
+// ForeGround Command
+
+ForegroundCommand::ForegroundCommand(commandInfo &cmdInfo) : jobHolder(-1)
+{
+  if (cmdInfo.size() == 1)
+  {
+    if (SmallShell::getInstance().getJobList()->isEmpty())
+    {
+      SmallShell::getInstance().smashError("fg: jobs list is empty");
+      return;
+    }
+    jobHolder = SmallShell::getInstance().getJobList()->getLastJob()->getId();
+    return;
+  }
+  if (cmdInfo.size() > 2 || !isInteger(cmdInfo[1]))
+  {
+    SmallShell::getInstance().smashError("fg: invalid arguments");
+    return;
+  }
+  if (!SmallShell::getInstance().getJobList()->getJobById(std::stoi(cmdInfo[1])))
+  {
+    cout << "smash error: fg: job-id " << cmdInfo[1] << " does not exist";
+    return;
+  }
+
+  jobHolder = std::stoi(cmdInfo[1]);
+  return;
+}
+
+void ForegroundCommand::execute()
+{
+  if (jobHolder == -1)
+  {
+    return;
+  }
+  int status;
+  int pid = SmallShell::getInstance().getJobList()->getJobById(jobHolder)->getPid();
+  waitpid(pid, &status, 0);
+  return;
+}
+
+// Quit command
+QuitCommand::QuitCommand(commandInfo &cmdInfoInput) : cmdInfo(cmdInfoInput)
+{
+}
+void QuitCommand::execute()
+{
+  if (cmdInfo.size() == 1)
+  {
+    exit(0);
+  }
+  auto temp = SmallShell::getInstance().getJobList()->getJobs();
+  if (cmdInfo[1].compare("kill") == 0)
+  {
+    cout << "smash: sending SIGKILL signal to " << temp.size() << " jobs:" << endl;
+    auto iter = temp.begin();
+    while (iter != temp.end())
+    {
+      kill(iter->getPid(), SIGKILL);
+    }
+    exit(0);
+  }
+  exit(0);
+}
+
+///// smallShell functions
 SmallShell::SmallShell() : prompt("smash")
 {
   this->currentDirectory = getcwd(NULL, 0);
   this->lastDirectory = "";
+  this->shellJobs = new JobsList();
 }
 
 void SmallShell::smashError(const std::string &error)
@@ -128,45 +250,6 @@ SmallShell::~SmallShell()
   // TODO: add your implementation
 }
 
-Command::~Command() {}
-
-void ChprompotCommand::execute()
-{
-  SmallShell::getInstance().setPrompt(this->prompt);
-}
-
-commandInfo convertToVector(char **CommandLine)
-{
-  commandInfo result;
-  if (CommandLine == nullptr)
-  {
-    return result; // Return empty vector if the input is nullptr
-  }
-  for (char **current = CommandLine; *current != nullptr; ++current)
-  {
-    result.push_back(std::string(*current));
-  }
-  return result;
-}
-
-void ShowPidCommand::execute()
-{
-  pid_t pid = getpid();
-  std::cout << "smash pid is " << pid << endl;
-}
-
-void pwdCommand::execute()
-{
-  char *path = getcwd(NULL, 0);
-  cout << path << endl;
-  free(path);
-}
-
-void CdCommand::execute()
-{
-
-  SmallShell::getInstance().setLastDirectory(this->newCdd);
-}
 Command *SmallShell::CreateCommand(const char *cmd_line)
 {
   char *CommandLine[MAX_ARGUMENTS];
@@ -208,13 +291,25 @@ Command *SmallShell::CreateCommand(const char *cmd_line)
       return new CdCommand(commandVector[1]);
     }
   }
+  // if (commandVector[0].compare("jobs") == 0)
+  // {
+  //   return new JobsCommand(commandVector);
+  // }
+  if (commandVector[0].compare("fg") == 0)
+  {
+    return new ForegroundCommand(commandVector);
+  }
+  if (commandVector[0].compare("quit") == 0)
+  {
+    return new QuitCommand(commandVector);
+  }
 
   return nullptr;
 }
 
 void SmallShell::executeCommand(const char *cmd_line)
 {
-  
+
   Command *cmd = CreateCommand(cmd_line);
   cmd->execute();
   // Please note that you must fork smash process for some commands (e.g., external commands....)

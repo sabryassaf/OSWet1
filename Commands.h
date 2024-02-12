@@ -3,17 +3,26 @@
 
 #include <vector>
 #include <string>
+#include <list>
 #define COMMAND_ARGS_MAX_LENGTH (200)
 #define COMMAND_MAX_ARGS (20)
 
+using std::list;
+using std::string;
+typedef std::vector<std::string> commandInfo;
+
 class Command
 {
-  // TODO: Add your data members
+protected:
+  string commandName;
+
 public:
   Command(){};
   Command(const char *cmd_line);
   virtual ~Command();
   virtual void execute() = 0;
+  virtual string getCommandName() const { return this->commandName; }
+  virtual int getPidOfCommand() const { return getpid(); }
   // virtual void prepare();
   // virtual void cleanup();
   //  TODO: Add your extra methods if needed
@@ -36,10 +45,12 @@ public:
   ChprompotCommand(std::string &promptNew)
   {
     this->prompt = promptNew;
+    this->commandName = "Chprompt";
   }
   ChprompotCommand()
   {
     this->prompt = "smash";
+    this->commandName = "Chprompt";
   }
   virtual ~ChprompotCommand() = default;
   void execute() override;
@@ -47,7 +58,7 @@ public:
 class ShowPidCommand : public BuiltInCommand
 {
 public:
-  ShowPidCommand(){};
+  ShowPidCommand() { this->commandName = "pid"; };
   virtual ~ShowPidCommand() = default;
   void execute() override;
 };
@@ -61,10 +72,20 @@ public:
   CdCommand(const std::string &newCd)
   {
     this->newCdd = newCd;
+    this->commandName = "cd";
   };
   void execute() override;
   virtual ~CdCommand() = default;
 };
+
+class JobsCommand : public BuiltInCommand
+{
+public:
+  JobsCommand(){};
+  virtual ~JobsCommand() = default;
+  void execute() override;
+};
+
 class ExternalCommand : public Command
 {
 public:
@@ -109,11 +130,16 @@ public:
   void execute() override;
 };
 
+class JobEntry;
+
 class JobsList;
 class QuitCommand : public BuiltInCommand
 {
-  // TODO: Add your data members public:
-  QuitCommand(const char *cmd_line, JobsList *jobs);
+private:
+  commandInfo cmdInfo;
+
+public:
+  QuitCommand(commandInfo &cmdinfo);
   virtual ~QuitCommand() {}
   void execute() override;
 };
@@ -127,10 +153,11 @@ public:
     int id;
     // proccess id
     int pid;
-    bool finished;
     std::string jobName;
+    bool finished;
 
   public:
+    JobEntry(int id, int pid, const string &name) : id(id), pid(pid), jobName(name), finished(false) {}
     int getId() const
     {
       return this->id;
@@ -138,6 +165,10 @@ public:
     int getPid() const
     {
       return this->pid;
+    }
+    string &getCommand()
+    {
+      return jobName;
     }
     void stopJob()
     {
@@ -148,29 +179,103 @@ public:
       return this->finished;
     }
   };
-  // TODO: Add your data members
+
+private:
+  int jobId;
+  // jobId is the maximum job number;
+  list<JobEntry> jobs;
+
 public:
-  JobsList();
-  ~JobsList();
-  void addJob(Command *cmd, bool isStopped = false);
-  void printJobsList();
-  void killAllJobs();
-  void removeFinishedJobs();
-  JobEntry *getJobById(int jobId);
-  void removeJobById(int jobId);
-  JobEntry *getLastJob(int *lastJobId);
+  JobsList() : jobId(0), jobs(list<JobEntry>()) {}
+  ~JobsList() = default;
+  void addJob(Command *cmd, int pid)
+  {
+    JobEntry newJob = JobEntry(jobId + 1, pid, cmd->getCommandName());
+    jobs.push_back(newJob);
+    jobId++;
+  }
+  void printJobsList()
+  {
+    removeFinishedJobs();
+    auto iter = jobs.begin();
+    while (iter != jobs.end())
+    {
+      std::cout << "[" << iter->getId() << "]"
+                << " " << iter->getCommand() << std::endl;
+      ++iter;
+    }
+  }
+  void killAllJobs()
+  {
+    auto iter = jobs.begin();
+    while (iter != jobs.end())
+    {
+      jobs.erase(iter);
+      return;
+      ++iter;
+    }
+  }
+  void removeFinishedJobs()
+  {
+    auto iter = jobs.begin();
+    while (iter != jobs.end())
+    {
+      if (iter->isJobFinished())
+      {
+        jobs.erase(iter);
+      }
+      ++iter;
+    }
+  }
+  JobEntry *getJobById(int jobId)
+  {
+    auto iter = jobs.begin();
+    while (iter != jobs.end())
+    {
+      if (iter->getId() == jobId)
+      {
+        return &(*iter);
+      }
+      ++iter;
+    }
+  }
+  void removeJobById(int jobId)
+  {
+    auto iter = jobs.begin();
+    while (iter != jobs.end())
+    {
+      if (iter->getId() == jobId)
+      {
+        jobs.erase(iter);
+        return;
+      }
+      ++iter;
+    }
+  }
+  bool isEmpty()
+  {
+    return jobs.empty();
+  }
+  JobEntry *getLastJob()
+  {
+    return &(getJobs().back());
+  }
   JobEntry *getLastStoppedJob(int *jobId);
   // TODO: Add extra methods or modify exisitng ones as needed
+  list<JobEntry> &getJobs()
+  {
+    return jobs;
+  }
 };
 
-class JobsCommand : public BuiltInCommand
-{
-  // TODO: Add your data members
-public:
-  JobsCommand(const char *cmd_line, JobsList *jobs);
-  virtual ~JobsCommand() {}
-  void execute() override;
-};
+// class JobsCommand : public BuiltInCommand
+// {
+//   // TODO: Add your data members
+// public:
+//   JobsCommand(const char *cmd_line, JobsList *jobs);
+//   virtual ~JobsCommand() {}
+//   void execute() override;
+// };
 
 class KillCommand : public BuiltInCommand
 {
@@ -183,9 +288,11 @@ public:
 
 class ForegroundCommand : public BuiltInCommand
 {
-  // TODO: Add your data members
+private:
+  int jobHolder;
+
 public:
-  ForegroundCommand(const char *cmd_line, JobsList *jobs);
+  ForegroundCommand(commandInfo &cmdInfo);
   virtual ~ForegroundCommand() {}
   void execute() override;
 };
@@ -215,6 +322,7 @@ private:
   std::string prompt;
   std::string lastDirectory;
   std::string currentDirectory;
+  JobsList *shellJobs;
   SmallShell();
 
 public:
@@ -228,11 +336,17 @@ public:
     return instance;
   }
   void smashError(const std::string &error);
+  JobsList *getJobList() { return shellJobs; }
 
   void setPrompt(std::string &newName) { this->prompt = newName; };
   std::string &getPrompt() { return this->prompt; };
 
   void setLastDirectory(std::string &newCd);
+
+  void printCurrentJobs()
+  {
+    this->shellJobs->printJobsList();
+  }
 
   ~SmallShell();
   void executeCommand(const char *cmd_line);
