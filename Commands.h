@@ -24,16 +24,9 @@ class BuiltInCommand : public Command
 public:
   BuiltInCommand(){};
   BuiltInCommand(const char *cmd_line);
-  virtual ~BuiltInCommand() {};
+  virtual ~BuiltInCommand(){};
 };
-class ShowPidCommand : public BuiltInCommand{
-public:
-    ShowPidCommand(){
-        execute();
-    };
-    virtual ~ShowPidCommand() = default;
-    void execute() override;
-};
+
 class ChprompotCommand : public BuiltInCommand
 {
 private:
@@ -43,17 +36,37 @@ public:
   ChprompotCommand(std::string &promptNew)
   {
     this->prompt = promptNew;
-    this->execute();
   }
   ChprompotCommand()
   {
     this->prompt = "smash";
-    this->execute();
   }
   virtual ~ChprompotCommand() = default;
   void execute() override;
 };
+class ShowPidCommand : public BuiltInCommand
+{
+public:
+  ShowPidCommand()
+  {
+  };
+  virtual ~ShowPidCommand() = default;
+  void execute() override;
+};
 
+class CdCommand : public BuiltInCommand
+{
+private:
+  std::string newCdd;
+
+public:
+  CdCommand(const std::string &newCd)
+  {
+    this->newCdd = newCd;
+  };
+  void execute() override;
+  virtual ~CdCommand() = default;
+};
 class ExternalCommand : public Command
 {
 public:
@@ -97,7 +110,6 @@ public:
   virtual ~GetCurrDirCommand() {}
   void execute() override;
 };
-
 
 class JobsList;
 class QuitCommand : public BuiltInCommand
@@ -161,26 +173,28 @@ class ChmodCommand : public BuiltInCommand
 {
 public:
   ChmodCommand(const char *cmd_line);
-  virtual ~ChmodCommand() = default; 
+  virtual ~ChmodCommand() = default;
   void execute() override;
 };
 
-class pwdCommand : public BuiltInCommand{
+class pwdCommand : public BuiltInCommand
+{
 public:
-    pwdCommand(){
-        execute();
-    };
-    virtual ~pwdCommand() = default;
-    void execute() override;
+  pwdCommand()
+  {
 
+  };
+  virtual ~pwdCommand() = default;
+  void execute() override;
 };
-
 
 class SmallShell
 {
 private:
   // TODO: Add your data members
   std::string prompt;
+  std::string lastDirectory;
+  std::string currentDirectory;
   SmallShell();
 
 public:
@@ -193,8 +207,13 @@ public:
     // Instantiated on first use.
     return instance;
   }
+  void smashError(const std::string &error);
+
   void setPrompt(std::string &newName) { this->prompt = newName; };
   std::string &getPrompt() { return this->prompt; };
+
+  void setLastDirectory(std::string &newCd);
+
   ~SmallShell();
   void executeCommand(const char *cmd_line);
   // TODO: add extra methods as needed

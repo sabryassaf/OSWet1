@@ -84,21 +84,39 @@ void _removeBackgroundSign(char *cmd_line)
   cmd_line[str.find_last_not_of(WHITESPACE, idx) + 1] = 0;
 }
 
-// TODO: Add your implementation for classes in Commands.h
-
 SmallShell::SmallShell() : prompt("smash")
 {
-  // TODO: add your implementation
+  this->currentDirectory = getcwd(NULL, 0);
+  this->lastDirectory = "";
 }
 
+void SmallShell::smashError(const std::string &error)
+{
+  cout << "smash error: " << error << endl;
+}
+
+void SmallShell::setLastDirectory(std::string &newCd)
+{
+  if (newCd.compare("-") == 0)
+  {
+    if (lastDirectory.empty())
+    {
+      smashError("OLDPWD not set");
+      return;
+    }
+    chdir(lastDirectory.c_str());
+    lastDirectory = currentDirectory;
+    return;
+  }
+  lastDirectory = currentDirectory;
+  chdir(newCd.c_str());
+  currentDirectory = newCd;
+  return;
+}
 SmallShell::~SmallShell()
 {
   // TODO: add your implementation
 }
-
-/**
- * Creates and returns a pointer to Command class which matches the given command line (cmd_line)
- */
 
 Command::~Command() {}
 
@@ -133,6 +151,12 @@ void pwdCommand::execute()
   cout << path << endl;
   free(path);
 }
+
+void CdCommand::execute()
+{
+  
+  SmallShell::getInstance().setLastDirectory(this->newCdd);
+}
 Command *SmallShell::CreateCommand(const char *cmd_line)
 {
   char *CommandLine[MAX_ARGUMENTS];
@@ -142,56 +166,35 @@ Command *SmallShell::CreateCommand(const char *cmd_line)
   }
   int words = _parseCommandLine(cmd_line, CommandLine);
   commandInfo commandVector = convertToVector(CommandLine);
+  for (int i = 0; i < words; ++i)
+  {
+    free(CommandLine[i]);
+  }
   if (commandVector[0].compare("chprompt") == 0)
   {
     if (commandVector.size() == 1)
     {
-      for (int i = 0; i < words; ++i)
-      {
-        free(CommandLine[i]);
-      }
       return new ChprompotCommand();
-    }
-    for (int i = 0; i < words; ++i)
-    {
-      free(CommandLine[i]);
     }
     return new ChprompotCommand(commandVector[1]);
   }
   if (commandVector[0].compare("showpid") == 0)
   {
-    for (int i = 0; i < words; ++i)
-    {
-      free(CommandLine[i]);
-    }
     return new ShowPidCommand();
   }
   if (commandVector[0].compare("pwd") == 0)
   {
-    for (int i = 0; i < words; ++i)
-    {
-      free(CommandLine[i]);
-    }
     return new pwdCommand();
   }
-  // For example:
-  /*
+  if (commandVector[0].compare("cd") == 0)
+  {
+    if (commandVector.size() > 2)
+    {
+      smashError("too many arguments");
+    }
+    return new CdCommand(commandVector[1]);
+  }
 
-    string cmd_s = _trim(string(cmd_line));
-    string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
-
-    if (firstWord.compare("pwd") == 0) {
-      return new GetCurrDirCommand(cmd_line);
-    }
-    else if (firstWord.compare("showpid") == 0) {
-      return new ShowPidCommand(cmd_line);
-    }
-    else if ...
-    .....
-    else {
-      return new ExternalCommand(cmd_line);
-    }
-    */
   return nullptr;
 }
 
@@ -199,9 +202,6 @@ void SmallShell::executeCommand(const char *cmd_line)
 {
 
   Command *cmd = CreateCommand(cmd_line);
-  // TODO: Add your implementation here
-  // for example:
-  // Command* cmd = CreateCommand(cmd_line);
-  // cmd->execute();
+  cmd->execute();
   // Please note that you must fork smash process for some commands (e.g., external commands....)
 }
