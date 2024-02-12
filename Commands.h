@@ -63,6 +63,15 @@ public:
   void execute() override;
 };
 
+class pwdCommand : public BuiltInCommand
+{
+public:
+  pwdCommand(){
+
+  };
+  virtual ~pwdCommand() = default;
+  void execute() override;
+};
 class CdCommand : public BuiltInCommand
 {
 private:
@@ -78,11 +87,42 @@ public:
   virtual ~CdCommand() = default;
 };
 
+class ForegroundCommand : public BuiltInCommand
+{
+private:
+  int jobHolder;
+
+public:
+  ForegroundCommand(commandInfo &cmdInfo);
+  virtual ~ForegroundCommand() {}
+  void execute() override;
+};
+
 class JobsCommand : public BuiltInCommand
 {
 public:
   JobsCommand(){};
   virtual ~JobsCommand() = default;
+  void execute() override;
+};
+
+class QuitCommand : public BuiltInCommand
+{
+private:
+  commandInfo cmdInfo;
+
+public:
+  QuitCommand(commandInfo &cmdinfo);
+  virtual ~QuitCommand() {}
+  void execute() override;
+};
+
+class KillCommand : public BuiltInCommand
+{
+private:
+public:
+  KillCommand(commandInfo &cmdInfo);
+  virtual ~KillCommand() {}
   void execute() override;
 };
 
@@ -133,16 +173,6 @@ public:
 class JobEntry;
 
 class JobsList;
-class QuitCommand : public BuiltInCommand
-{
-private:
-  commandInfo cmdInfo;
-
-public:
-  QuitCommand(commandInfo &cmdinfo);
-  virtual ~QuitCommand() {}
-  void execute() override;
-};
 
 class JobsList
 {
@@ -277,41 +307,11 @@ public:
 //   void execute() override;
 // };
 
-class KillCommand : public BuiltInCommand
-{
-  // TODO: Add your data members
-public:
-  KillCommand(const char *cmd_line, JobsList *jobs);
-  virtual ~KillCommand() {}
-  void execute() override;
-};
-
-class ForegroundCommand : public BuiltInCommand
-{
-private:
-  int jobHolder;
-
-public:
-  ForegroundCommand(commandInfo &cmdInfo);
-  virtual ~ForegroundCommand() {}
-  void execute() override;
-};
-
 class ChmodCommand : public BuiltInCommand
 {
 public:
   ChmodCommand(const char *cmd_line);
   virtual ~ChmodCommand() = default;
-  void execute() override;
-};
-
-class pwdCommand : public BuiltInCommand
-{
-public:
-  pwdCommand(){
-
-  };
-  virtual ~pwdCommand() = default;
   void execute() override;
 };
 
