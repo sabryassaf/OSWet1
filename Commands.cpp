@@ -104,12 +104,22 @@ void SmallShell::setLastDirectory(std::string &newCd)
       smashError("OLDPWD not set");
       return;
     }
-    chdir(lastDirectory.c_str());
-    lastDirectory = currentDirectory;
+    if (chdir(lastDirectory.c_str()) == -1)
+    {
+      perror("smash error: chdir() failed");
+      return;
+    }
+    std::string temp = currentDirectory;
+    currentDirectory = lastDirectory;
+    lastDirectory = temp;
+    return;
+  }
+  if (chdir(newCd.c_str()) == -1)
+  {
+    perror("smash error: chdir() failed");
     return;
   }
   lastDirectory = currentDirectory;
-  chdir(newCd.c_str());
   currentDirectory = newCd;
   return;
 }
@@ -154,7 +164,7 @@ void pwdCommand::execute()
 
 void CdCommand::execute()
 {
-  
+
   SmallShell::getInstance().setLastDirectory(this->newCdd);
 }
 Command *SmallShell::CreateCommand(const char *cmd_line)
@@ -166,6 +176,7 @@ Command *SmallShell::CreateCommand(const char *cmd_line)
   }
   int words = _parseCommandLine(cmd_line, CommandLine);
   commandInfo commandVector = convertToVector(CommandLine);
+
   for (int i = 0; i < words; ++i)
   {
     free(CommandLine[i]);
@@ -192,7 +203,10 @@ Command *SmallShell::CreateCommand(const char *cmd_line)
     {
       smashError("too many arguments");
     }
-    return new CdCommand(commandVector[1]);
+    else
+    {
+      return new CdCommand(commandVector[1]);
+    }
   }
 
   return nullptr;
@@ -200,7 +214,7 @@ Command *SmallShell::CreateCommand(const char *cmd_line)
 
 void SmallShell::executeCommand(const char *cmd_line)
 {
-
+  
   Command *cmd = CreateCommand(cmd_line);
   cmd->execute();
   // Please note that you must fork smash process for some commands (e.g., external commands....)

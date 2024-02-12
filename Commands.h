@@ -47,9 +47,7 @@ public:
 class ShowPidCommand : public BuiltInCommand
 {
 public:
-  ShowPidCommand()
-  {
-  };
+  ShowPidCommand(){};
   virtual ~ShowPidCommand() = default;
   void execute() override;
 };
@@ -125,7 +123,30 @@ class JobsList
 public:
   class JobEntry
   {
-    // TODO: Add your data members
+  private:
+    int id;
+    // proccess id
+    int pid;
+    bool finished;
+    std::string jobName;
+
+  public:
+    int getId() const
+    {
+      return this->id;
+    }
+    int getPid() const
+    {
+      return this->pid;
+    }
+    void stopJob()
+    {
+      finished = true;
+    }
+    bool isJobFinished()
+    {
+      return this->finished;
+    }
   };
   // TODO: Add your data members
 public:
@@ -180,8 +201,7 @@ public:
 class pwdCommand : public BuiltInCommand
 {
 public:
-  pwdCommand()
-  {
+  pwdCommand(){
 
   };
   virtual ~pwdCommand() = default;
