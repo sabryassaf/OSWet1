@@ -117,30 +117,144 @@ void ChprompotCommand::execute()
   SMASH.setPrompt(this->prompt);
 }
 
-/// show Pid Command
+/// showPidCommand
 void ShowPidCommand::execute()
 {
   pid_t pid = getpid();
   std::cout << "smash pid is " << pid << endl;
 }
-/// Pwdcommand
+/// PwdCommand
 void pwdCommand::execute()
 {
   char *path = getcwd(NULL, 0);
   cout << path << endl;
   free(path);
 }
-// cd command
+// ChangeDirectoryCommand
 void CdCommand::execute()
 {
 
   SMASH.setLastDirectory(this->newCdd);
 }
-void JobsCommand::execute()
+// JobsClass
+void JobsList::addJob(Command *cmd, int pid)
 {
-  SMASH.printCurrentJobs();
+  JobEntry newJob = JobEntry(jobId + 1, pid, cmd->getCommandName());
+  jobs.push_back(newJob);
+  jobId++;
 }
-// Jobs Command
+
+void JobsList::printJobsList()
+{
+  removeFinishedJobs();
+  auto iter = jobs.begin();
+  while (iter != jobs.end())
+  {
+    std::cout << "[" << iter->getId() << "]"
+              << " " << iter->getCommand() << std::endl;
+    ++iter;
+  }
+}
+
+void JobsList::killAllJobs()
+{
+  auto iter = jobs.begin();
+  while (iter != jobs.end())
+  {
+    jobs.erase(iter);
+    return;
+    ++iter;
+  }
+}
+
+void JobsList::removeFinishedJobs()
+{
+  auto iter = jobs.begin();
+  while (iter != jobs.end())
+  {
+    if (iter->isJobFinished())
+    {
+      jobs.erase(iter);
+    }
+    ++iter;
+  }
+}
+
+JobsList::JobEntry *JobsList::getJobById(int jobId)
+{
+  auto iter = jobs.begin();
+  while (iter != jobs.end())
+  {
+    if (iter->getId() == jobId)
+    {
+      return &(*iter);
+    }
+    ++iter;
+  }
+}
+
+void JobsList::removeJobById(int jobId)
+{
+  auto iter = jobs.begin();
+  while (iter != jobs.end())
+  {
+    if (iter->getId() == jobId)
+    {
+      jobs.erase(iter);
+      return;
+    }
+    ++iter;
+  }
+}
+
+bool JobsList::isEmpty()
+{
+  return jobs.empty();
+}
+
+JobsList::JobEntry *JobsList::getLastJob()
+{
+  return &(getJobs().back());
+}
+//// need to finish getLastStiooedJob
+JobsList::JobEntry *JobsList::getLastStoppedJob(int *jobId) {}
+
+list<JobsList::JobEntry> &JobsList::getJobs()
+{
+  return jobs;
+}
+// JobEntry
+int JobsList::JobEntry::getId() const
+{
+  return this->id;
+}
+
+int JobsList::JobEntry::getPid() const
+{
+  return this->pid;
+}
+
+const string &JobsList::JobEntry::getCommand() const
+{
+  return jobName;
+}
+
+void JobsList::JobEntry::stopJob()
+{
+  finished = true;
+}
+
+void JobsList::JobEntry::continueJob()
+{
+  finished = false;
+}
+
+bool JobsList::JobEntry::isJobFinished() const
+{
+  return this->finished;
+}
+
+// JobsCommand
 
 JobsCommand::JobsCommand(commandInfo &cmdInfoInput) : cmdInfo(cmdInfoInput)
 {
@@ -148,7 +262,7 @@ JobsCommand::JobsCommand(commandInfo &cmdInfoInput) : cmdInfo(cmdInfoInput)
 
 void JobsCommand::execute()
 {
-  SMASH.getJobList()->printJobsList();
+  SMASH.printCurrentJobs();
 }
 // ForeGround Command
 
@@ -248,7 +362,7 @@ void KillCommand::execute()
   }
   else if (signal == SIGCONT)
   {
-    tmp->contJob();
+    tmp->continueJob();
   }
 }
 ///// smallShell functions

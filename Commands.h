@@ -91,6 +91,7 @@ class ForegroundCommand : public BuiltInCommand
 {
 private:
   int jobHolder;
+
 public:
   ForegroundCommand(commandInfo &cmdInfo);
   virtual ~ForegroundCommand() {}
@@ -101,6 +102,7 @@ class JobsCommand : public BuiltInCommand
 {
 private:
   commandInfo cmdInfo;
+
 public:
   JobsCommand(commandInfo &cmdInfo);
   virtual ~JobsCommand() = default;
@@ -122,6 +124,7 @@ class KillCommand : public BuiltInCommand
 {
 private:
   commandInfo cmdInfo;
+
 public:
   KillCommand(commandInfo &cmdInfo);
   virtual ~KillCommand() {}
@@ -156,22 +159,6 @@ public:
   // void cleanup() override;
 };
 
-class ChangeDirCommand : public BuiltInCommand
-{
-  // TODO: Add your data members public:
-  ChangeDirCommand(const char *cmd_line, char **plastPwd);
-  virtual ~ChangeDirCommand() {}
-  void execute() override;
-};
-
-class GetCurrDirCommand : public BuiltInCommand
-{
-public:
-  GetCurrDirCommand(const char *cmd_line);
-  virtual ~GetCurrDirCommand() {}
-  void execute() override;
-};
-
 class JobEntry;
 
 class JobsList;
@@ -190,30 +177,12 @@ public:
 
   public:
     JobEntry(int id, int pid, const string &name) : id(id), pid(pid), jobName(name), finished(false) {}
-    int getId() const
-    {
-      return this->id;
-    }
-    int getPid() const
-    {
-      return this->pid;
-    }
-    string &getCommand()
-    {
-      return jobName;
-    }
-    void stopJob()
-    {
-      finished = true;
-    }
-    void contJob()
-    {
-      finished = false;
-    }
-    bool isJobFinished()
-    {
-      return this->finished;
-    }
+    int getId() const;
+    int getPid() const;
+    const string &getCommand() const;
+    void stopJob();
+    void continueJob();
+    bool isJobFinished() const;
   };
 
 private:
@@ -224,87 +193,18 @@ private:
 public:
   JobsList() : jobId(0), jobs(list<JobEntry>()) {}
   ~JobsList() = default;
-  void addJob(Command *cmd, int pid)
-  {
-    JobEntry newJob = JobEntry(jobId + 1, pid, cmd->getCommandName());
-    jobs.push_back(newJob);
-    jobId++;
-  }
-  void printJobsList()
-  {
-    removeFinishedJobs();
-    auto iter = jobs.begin();
-    while (iter != jobs.end())
-    {
-      std::cout << "[" << iter->getId() << "]"
-                << " " << iter->getCommand() << std::endl;
-      ++iter;
-    }
-  }
-  void killAllJobs()
-  {
-    auto iter = jobs.begin();
-    while (iter != jobs.end())
-    {
-      jobs.erase(iter);
-      return;
-      ++iter;
-    }
-  }
-  void removeFinishedJobs()
-  {
-    auto iter = jobs.begin();
-    while (iter != jobs.end())
-    {
-      if (iter->isJobFinished())
-      {
-        jobs.erase(iter);
-      }
-      ++iter;
-    }
-  }
-  JobEntry *getJobById(int jobId)
-  {
-    auto iter = jobs.begin();
-    while (iter != jobs.end())
-    {
-      if (iter->getId() == jobId)
-      {
-        return &(*iter);
-      }
-      ++iter;
-    }
-  }
-  void removeJobById(int jobId)
-  {
-    auto iter = jobs.begin();
-    while (iter != jobs.end())
-    {
-      if (iter->getId() == jobId)
-      {
-        jobs.erase(iter);
-        return;
-      }
-      ++iter;
-    }
-  }
-  bool isEmpty()
-  {
-    return jobs.empty();
-  }
-  JobEntry *getLastJob()
-  {
-    return &(getJobs().back());
-  }
+  void addJob(Command *cmd, int pid);
+  void printJobsList();
+  void killAllJobs();
+  void removeFinishedJobs();
+  JobEntry *getJobById(int jobId);
+  void removeJobById(int jobId);
+  bool isEmpty();
+  JobEntry *getLastJob();
   JobEntry *getLastStoppedJob(int *jobId);
   // TODO: Add extra methods or modify exisitng ones as needed
-  list<JobEntry> &getJobs()
-  {
-    return jobs;
-  }
+  list<JobEntry> &getJobs();
 };
-
-
 
 class ChmodCommand : public BuiltInCommand
 {
