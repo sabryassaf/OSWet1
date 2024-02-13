@@ -133,8 +133,12 @@ public:
 
 class ExternalCommand : public Command
 {
+private:
+  commandInfo cmdInfo;
+  bool isBackGroundComamnd;
+
 public:
-  ExternalCommand(const char *cmd_line);
+  ExternalCommand(commandInfo &cmdInfoInput, bool isBackGround) : cmdInfo(cmdInfoInput), isBackGroundComamnd(isBackGround){};
   virtual ~ExternalCommand() {}
   void execute() override;
 };
