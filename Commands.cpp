@@ -7,7 +7,7 @@
 #include <iomanip>
 #include "Commands.h"
 
-#define MAX_ARGUMENTS 20
+#define MAX_ARGUMENTS 25
 using namespace std;
 typedef std::vector<std::string> commandInfo;
 #define SMASH SmallShell::getInstance()
@@ -46,6 +46,12 @@ commandInfo convertToVector(char **CommandLine)
     result.push_back(std::string(*current));
   }
   return result;
+}
+
+bool isComplex(const char *str)
+{
+  string temp(str);
+  return ((temp.find('*' != string::npos) || (temp.find('?') != string::npos)));
 }
 
 //////// functions from the course
@@ -110,8 +116,20 @@ void _removeBackgroundSign(char *cmd_line)
   cmd_line[str.find_last_not_of(WHITESPACE, idx) + 1] = 0;
 }
 
+char *prepareArgsForBash(const std::string &cmd)
+{
+  if (_isBackgroundComamnd(cmd.c_str()))
+  {
+    char *c = strdup(cmd.c_str());
+    _removeBackgroundSign(c);
+    return c;
+  }
+  else
+    return strdup(cmd.c_str());
+}
 Command::~Command() {}
 
+/// ChpromptCommand
 void ChprompotCommand::execute()
 {
   SMASH.setPrompt(this->prompt);
@@ -137,9 +155,9 @@ void CdCommand::execute()
   SMASH.setLastDirectory(this->newCdd);
 }
 // JobsClass
-void JobsList::addJob(Command *cmd, int pid)
+void JobsList::addJob(std::string CommandName, int pid)
 {
-  JobEntry newJob = JobEntry(jobId + 1, pid, cmd->getCommandName());
+  JobEntry newJob = JobEntry(jobId + 1, pid, CommandName);
   jobs.push_back(newJob);
   jobId++;
 }
@@ -167,18 +185,22 @@ void JobsList::killAllJobs()
   }
 }
 
+
 void JobsList::removeFinishedJobs()
 {
   auto iter = jobs.begin();
   while (iter != jobs.end())
   {
-    if (iter->isJobFinished())
+    int res = waitpid(iter->getPid(),nullptr,WNOHANG);
+    if (res != 0)
     {
-      jobs.erase(iter);
+      // jobs.erase(iter);
     }
     ++iter;
   }
 }
+
+
 
 JobsList::JobEntry *JobsList::getJobById(int jobId)
 {
@@ -352,7 +374,7 @@ void KillCommand::execute()
   int rc = kill(pid, signal);
   if (rc != 0)
   {
-    perror("smash error: kill() failed");
+    perror("smash error: kill failed");
     return;
   }
   cout << "signal number " << cmdInfo[1] << " was sent to pid " << pid << endl;
@@ -365,6 +387,80 @@ void KillCommand::execute()
     tmp->continueJob();
   }
 }
+
+/// External Command
+void ExternalCommand::execute()
+{
+  int status = 0;
+  pid_t pid = fork();
+  if (isComplex(this->cmdLine))
+  {
+    if (pid > 0)
+    {
+      if (isBackGroundComamnd)
+      {
+        SMASH.getJobList()->addJob(cmdInfo[0], pid);
+      }
+      else
+      {
+        if (waitpid(pid, &status, WSTOPPED) == -1)
+        {
+          perror("smash error: waitpid failed");
+        }
+      }
+    }
+    else if (pid == 0)
+    {
+      if (setpgrp() == -1)
+      {
+        perror("smash error: setgrp() failed");
+      }
+      char *args[4] = {(char *)"/bin/bash", (char *)"-c", prepareArgsForBash(cmdLine), NULL};
+      if (execv(args[0], args) == -1)
+      {
+        perror("smash error: execv failed");
+      }
+    }
+    else
+    {
+      perror("smash error: fork failed");
+    }
+  }
+  else
+  {
+    if (pid > 0)
+    {
+      if (isBackGroundComamnd)
+      {
+        SMASH.getJobList()->addJob(cmdInfo[0], pid);
+      }
+      else
+      {
+        if (waitpid(pid, &status, WSTOPPED) == -1)
+        {
+          perror("smash error: waitpid failed");
+        }
+      }
+    }
+    else if (pid == 0)
+    {
+      if (setpgrp() == -1)
+      {
+        perror("smash error: setgrp() failed");
+      }
+      char *args[4] = {(char *)"/bin/bash", (char *)"-c", prepareArgsForBash(cmdLine), NULL};
+      if (execvp(args[0], args) == -1)
+      {
+        perror("smash error: execvp failed");
+      }
+    }
+    else
+    {
+      perror("smash error: fork failed");
+    }
+  }
+}
+
 ///// smallShell functions
 SmallShell::SmallShell() : prompt("smash")
 {
@@ -389,7 +485,7 @@ void SmallShell::setLastDirectory(std::string &newCd)
     }
     if (chdir(lastDirectory.c_str()) == -1)
     {
-      perror("smash error: chdir() failed");
+      perror("smash error: chdir failed");
       return;
     }
     std::string temp = currentDirectory;
@@ -399,7 +495,7 @@ void SmallShell::setLastDirectory(std::string &newCd)
   }
   if (chdir(newCd.c_str()) == -1)
   {
-    perror("smash error: chdir() failed");
+    perror("smash error: chdir failed");
     return;
   }
   lastDirectory = currentDirectory;
@@ -419,6 +515,7 @@ Command *SmallShell::CreateCommand(const char *cmd_line)
     CommandLine[i] = nullptr;
   }
   int words = _parseCommandLine(cmd_line, CommandLine);
+  bool isBackgroundCommandInput = _isBackgroundComamnd(cmd_line);
   commandInfo commandVector = convertToVector(CommandLine);
 
   for (int i = 0; i < words; ++i)
@@ -469,11 +566,12 @@ Command *SmallShell::CreateCommand(const char *cmd_line)
     return new KillCommand(commandVector);
   }
 
-  return nullptr;
+  return new ExternalCommand(commandVector, isBackgroundCommandInput, cmd_line);
 }
 
 void SmallShell::executeCommand(const char *cmd_line)
 {
+  shellJobs->removeFinishedJobs();
   Command *cmd = CreateCommand(cmd_line);
   cmd->execute();
   // Please note that you must fork smash process for some commands (e.g., external commands....)

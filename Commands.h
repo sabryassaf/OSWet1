@@ -136,9 +136,10 @@ class ExternalCommand : public Command
 private:
   commandInfo cmdInfo;
   bool isBackGroundComamnd;
+  const char *cmdLine;
 
 public:
-  ExternalCommand(commandInfo &cmdInfoInput, bool isBackGround) : cmdInfo(cmdInfoInput), isBackGroundComamnd(isBackGround){};
+  ExternalCommand(commandInfo &cmdInfoInput, bool isBackGround, const char *cmdLineInput) : cmdInfo(cmdInfoInput), isBackGroundComamnd(isBackGround), cmdLine(cmdLineInput){};
   virtual ~ExternalCommand() {}
   void execute() override;
 };
@@ -197,7 +198,7 @@ private:
 public:
   JobsList() : jobId(0), jobs(list<JobEntry>()) {}
   ~JobsList() = default;
-  void addJob(Command *cmd, int pid);
+  void addJob(std::string commandName, int pid);
   void printJobsList();
   void killAllJobs();
   void removeFinishedJobs();

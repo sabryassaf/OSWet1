@@ -24,7 +24,6 @@ int main(int argc, char *argv[])
         {
             break;
         }
-        // need to remove the extra in the command input
         smash.executeCommand(cmd_line.c_str());
     }
     return 0;
