@@ -184,23 +184,39 @@ void JobsList::killAllJobs()
     ++iter;
   }
 }
-
-
-void JobsList::removeFinishedJobs()
+int JobsList::getMaxJobId()
 {
-  auto iter = jobs.begin();
-  while (iter != jobs.end())
+  int currentMax = 0;
+  list<JobEntry> &tempList = jobs;
+  auto iter = tempList.begin();
+  while (iter != tempList.end())
   {
-    int res = waitpid(iter->getPid(),nullptr,WNOHANG);
-    if (res != 0)
+    if (iter->getId() >= currentMax)
     {
-      // jobs.erase(iter);
+      currentMax = iter->getId();
     }
     ++iter;
   }
+  return currentMax;
 }
-
-
+void JobsList::removeFinishedJobs()
+{
+  list<JobEntry> &tempList = jobs;
+  auto iter = tempList.begin();
+  while (iter != tempList.end())
+  {
+    int res = waitpid(iter->getPid(), nullptr, WNOHANG);
+    if (res != 0)
+    {
+      iter = tempList.erase(iter);
+    }
+    else
+    {
+      ++iter;
+    }
+  }
+  this->jobId = this->getMaxJobId();
+}
 
 JobsList::JobEntry *JobsList::getJobById(int jobId)
 {
@@ -322,6 +338,8 @@ void ForegroundCommand::execute()
   }
   int status;
   int pid = SMASH.getJobList()->getJobById(jobHolder)->getPid();
+  std::string commandConcatenate = SMASH.getJobList()->getJobById(jobHolder)->getJobName();
+  cout << commandConcatenate << " " << pid << endl;
   waitpid(pid, &status, 0);
 }
 
@@ -399,7 +417,8 @@ void ExternalCommand::execute()
     {
       if (isBackGroundComamnd)
       {
-        SMASH.getJobList()->addJob(cmdInfo[0], pid);
+        std::string commandConcatenate = cmdInfo[0] + " " + cmdInfo[1];
+        SMASH.getJobList()->addJob(commandConcatenate, pid);
       }
       else
       {
@@ -432,7 +451,8 @@ void ExternalCommand::execute()
     {
       if (isBackGroundComamnd)
       {
-        SMASH.getJobList()->addJob(cmdInfo[0], pid);
+        std::string commandConcatenate = cmdInfo[0] + " " + cmdInfo[1];
+        SMASH.getJobList()->addJob(commandConcatenate, pid);
       }
       else
       {

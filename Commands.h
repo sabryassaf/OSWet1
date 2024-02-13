@@ -4,6 +4,9 @@
 #include <vector>
 #include <string>
 #include <list>
+#include <sys/wait.h>
+#include <unistd.h>
+
 #define COMMAND_ARGS_MAX_LENGTH (200)
 #define COMMAND_MAX_ARGS (20)
 
@@ -185,6 +188,7 @@ public:
     int getId() const;
     int getPid() const;
     const string &getCommand() const;
+    std::string getJobName() { return this-> jobName;};
     void stopJob();
     void continueJob();
     bool isJobFinished() const;
@@ -205,6 +209,7 @@ public:
   JobEntry *getJobById(int jobId);
   void removeJobById(int jobId);
   bool isEmpty();
+  int getMaxJobId() ;
   JobEntry *getLastJob();
   JobEntry *getLastStoppedJob(int *jobId);
   // TODO: Add extra methods or modify exisitng ones as needed
