@@ -27,22 +27,39 @@ const std::string WHITESPACE = " \n\r\t\f\v";
 #define FUNC_EXIT()
 #endif
 // helper functions
-bool isInteger(const std::string &str)
+
+bool isInteger(string s)
 {
-  std::istringstream iss(str);
-  int number;
-  char leftover;
-  if ((iss >> number) && !(iss >> leftover))
-    return true; // Successfully read an int and nothing else
-  return false;
+  if (s.size() == 0)
+    return false;
+  for (int i = 0; i < s.size(); i++)
+  {
+    if ((s[i] >= '0' && s[i] <= '9') == false)
+    {
+      return false;
+    }
+  }
+  return true;
 }
 
+// bool isInteger(const std::string &str)
+// {
+//   std::istringstream iss(str);
+//   int number;
+//   char leftover;
+//   if ((iss >> number) && !(iss >> leftover))
+//     return true;
+//   return false;
+// }
+
+// convert the input commandline into a vector of strings
 commandInfo convertToVector(char **CommandLine)
 {
   commandInfo result;
+  // check for null input inorder not to try and access null pointers
   if (CommandLine == nullptr)
   {
-    return result; // Return empty vector if the input is nullptr
+    return result;
   }
   for (char **current = CommandLine; *current != nullptr; ++current)
   {
@@ -54,21 +71,26 @@ commandInfo convertToVector(char **CommandLine)
 bool isComplex(const char *Commandline)
 {
   string temp(Commandline);
+  // check if anyof the complex signs appear in our command line vector
   return ((temp.find('*' != string::npos) || (temp.find('?') != string::npos)));
 }
 
+// define those funcion names to use them
 bool _isBackgroundComamnd(const char *cmd_line);
 
 void _removeBackgroundSign(char *cmd_line);
 
 bool isRedirected(const char *Commandline)
 {
+  // check if the command is redirected, i/o pipe
   string temp(Commandline);
   return ((temp.find('>') != string::npos) || (temp.find('>>') != string::npos) || (temp.find('|') != string::npos) || (temp.find('|&') != string::npos));
 }
 
+// incase of a background command we need to strip the & before sending it to bash
 char *bashArgsPreperation(const std::string &cmd)
 {
+  // check if it is a background command = has & at end
   if (_isBackgroundComamnd(cmd.c_str()))
   {
     char *c = strdup(cmd.c_str());
@@ -191,6 +213,7 @@ void CdCommand::execute()
 // JobsClass
 void JobsList::addJob(std::string CommandName, int pid)
 {
+  // push the new job to our job lists with job id = max current job id + 1
   JobEntry newJob = JobEntry(jobId + 1, pid, CommandName);
   jobs.push_back(newJob);
   jobId++;
@@ -198,6 +221,7 @@ void JobsList::addJob(std::string CommandName, int pid)
 
 void JobsList::printJobsList()
 {
+  // iterate over the jobs and print them as requested
   removeFinishedJobs();
   auto iter = jobs.begin();
   while (iter != jobs.end())
@@ -225,6 +249,7 @@ int JobsList::getMaxJobId()
   auto iter = tempList.begin();
   while (iter != tempList.end())
   {
+    // iterate over the current jobs and update the max job id
     if (iter->getId() >= currentMax)
     {
       currentMax = iter->getId();
@@ -239,6 +264,7 @@ void JobsList::removeFinishedJobs()
   auto iter = tempList.begin();
   while (iter != tempList.end())
   {
+    // check each job status and remove it if its done, res = 0 means the job still running
     int res = waitpid(iter->getPid(), nullptr, WNOHANG);
     if (res != 0)
     {
@@ -289,7 +315,6 @@ JobsList::JobEntry *JobsList::getLastJob()
   return &(getJobs().back());
 }
 //// need to finish getLastStiooedJob
-JobsList::JobEntry *JobsList::getLastStoppedJob(int *jobId) {}
 
 list<JobsList::JobEntry> &JobsList::getJobs()
 {
@@ -338,7 +363,7 @@ void JobsCommand::execute()
 }
 // ForeGround Command
 
-ForegroundCommand::ForegroundCommand(commandInfo &cmdInfo) : jobHolder(-1)
+ForegroundCommand::ForegroundCommand(commandInfo &cmdInfo) : jobHolder(-100)
 {
   if (cmdInfo.size() == 1)
   {
@@ -347,33 +372,40 @@ ForegroundCommand::ForegroundCommand(commandInfo &cmdInfo) : jobHolder(-1)
       SMASH.smashError("fg: jobs list is empty");
       return;
     }
+    // incase a job id wasnt provided with fg we use the last job inserted
     jobHolder = SMASH.getJobList()->getLastJob()->getId();
     return;
   }
+  // incase the fg was provided with data, check if data is valid
   if (cmdInfo.size() > 2 || !isInteger(cmdInfo[1]))
   {
     SMASH.smashError("fg: invalid arguments");
     return;
   }
+  //check if the job id is in our jobs list
   if (!SMASH.getJobList()->getJobById(std::stoi(cmdInfo[1])))
   {
     cout << "smash error: fg: job-id " << cmdInfo[1] << " does not exist";
     return;
   }
-
+  // if we reach here means the job id provided with the command meets all the requirements so we save it in jobholder as integer
   jobHolder = std::stoi(cmdInfo[1]);
 }
 
 void ForegroundCommand::execute()
 {
-  if (jobHolder == -1)
+  // if we have errors we would return in the constructor before changing the jobHolder from how it was in the initialization list
+  if (jobHolder == -100)
   {
     return;
   }
   int status;
+  //get the pid fro the job
   int pid = SMASH.getJobList()->getJobById(jobHolder)->getPid();
   std::string commandConcatenate = SMASH.getJobList()->getJobById(jobHolder)->getJobName();
+  //print job name with pid
   cout << commandConcatenate << " " << pid << endl;
+  //wait for job to finish 
   waitpid(pid, &status, 0);
 }
 
@@ -514,6 +546,8 @@ void ExternalCommand::execute()
     }
   }
 }
+
+// Redirection Command
 RedirectionCommand::RedirectionCommand(commandInfo &cmdInfoInput, const char *cmd_line) : cmdInfo(cmdInfoInput), cmdLine(cmd_line)
 {
   // first of all we go over our command vector and check for either < or <<
@@ -569,7 +603,7 @@ void RedirectionCommand::execute()
   {
     int original_stdout_fd = dup(1);
 
-    int temp_fd = open(this->targetFile.c_str(), O_CREAT|O_WRONLY|O_APPEND, 0666);
+    int temp_fd = open(this->targetFile.c_str(), O_CREAT | O_WRONLY | O_APPEND, 0666);
     if (temp_fd == -1)
     {
       perror("smash error: open failed");
@@ -603,6 +637,31 @@ void RedirectionCommand::fixFileName()
     _removeBackgroundSign(tmp);
     this->targetFile = tmp;
     return;
+  }
+}
+
+// Chmod Command
+ChmodCommand::ChmodCommand(commandInfo &commandInfoInput)
+{
+  // test for invalid arguments
+  if (commandInfoInput.size() != 3 || !isInteger(commandInfoInput[1]) || commandInfoInput[1].length() > 4)
+  {
+    SMASH.smashError("chmod: invalid arguments");
+    return;
+  }
+
+  // convert from octal to regular base int
+  this->mode = std::stoi(commandInfoInput[1], nullptr, 8);
+  // save filePath
+  this->filePath = commandInfoInput[2];
+}
+
+void ChmodCommand::execute()
+{
+  // check if chmod command works and perform it
+  if (chmod(this->filePath.c_str(), this->mode))
+  {
+    perror("smash error: chmod failed");
   }
 }
 
@@ -715,6 +774,10 @@ Command *SmallShell::CreateCommand(const char *cmd_line)
   {
     return new KillCommand(commandVector);
   }
+  if (commandVector[0].compare("chmod") == 0)
+  {
+    return new ChmodCommand(commandVector);
+  }
 
   return new ExternalCommand(commandVector, isBackgroundCommandInput, cmd_line);
 }
@@ -723,6 +786,9 @@ void SmallShell::executeCommand(const char *cmd_line)
 {
   shellJobs->removeFinishedJobs();
   Command *cmd = CreateCommand(cmd_line);
-  cmd->execute();
+  if (cmd)
+  {
+    cmd->execute();
+  }
   // Please note that you must fork smash process for some commands (e.g., external commands....)
 }

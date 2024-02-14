@@ -218,14 +218,17 @@ public:
   bool isEmpty();
   int getMaxJobId();
   JobEntry *getLastJob();
-  JobEntry *getLastStoppedJob(int *jobId);
   list<JobEntry> &getJobs();
 };
 
 class ChmodCommand : public BuiltInCommand
 {
+private:
+  commandInfo cmdInfo;
+  int mode;
+  std::string filePath;
 public:
-  ChmodCommand(const char *cmd_line);
+  ChmodCommand(commandInfo &cmdInfo);
   virtual ~ChmodCommand() = default;
   void execute() override;
 };
