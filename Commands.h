@@ -158,12 +158,19 @@ public:
 
 class RedirectionCommand : public Command
 {
-  // TODO: Add your data members
+  commandInfo cmdInfo;
+  commandInfo splittedCommand;
+  const char *cmdLine;
+  std::string commandOperator;
+  std::string targetFile;
+  std::string Lcommand;
+
 public:
-  explicit RedirectionCommand(const char *cmd_line);
+  explicit RedirectionCommand(commandInfo &cmdInfoInput, const char *cmd_line);
   virtual ~RedirectionCommand() {}
   void execute() override;
-  // void prepare() override;
+  void fixFileName();
+  void prepare();
   // void cleanup() override;
 };
 
@@ -188,7 +195,7 @@ public:
     int getId() const;
     int getPid() const;
     const string &getCommand() const;
-    std::string getJobName() { return this-> jobName;};
+    std::string getJobName() { return this->jobName; };
     void stopJob();
     void continueJob();
     bool isJobFinished() const;
@@ -209,10 +216,9 @@ public:
   JobEntry *getJobById(int jobId);
   void removeJobById(int jobId);
   bool isEmpty();
-  int getMaxJobId() ;
+  int getMaxJobId();
   JobEntry *getLastJob();
   JobEntry *getLastStoppedJob(int *jobId);
-  // TODO: Add extra methods or modify exisitng ones as needed
   list<JobEntry> &getJobs();
 };
 
@@ -259,7 +265,6 @@ public:
 
   ~SmallShell();
   void executeCommand(const char *cmd_line);
-  // TODO: add extra methods as needed
 };
 
 #endif // SMASH_COMMAND_H_

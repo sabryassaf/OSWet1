@@ -6,6 +6,9 @@
 #include <sys/wait.h>
 #include <iomanip>
 #include "Commands.h"
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #define MAX_ARGUMENTS 25
 using namespace std;
@@ -48,10 +51,52 @@ commandInfo convertToVector(char **CommandLine)
   return result;
 }
 
-bool isComplex(const char *str)
+bool isComplex(const char *Commandline)
 {
-  string temp(str);
+  string temp(Commandline);
   return ((temp.find('*' != string::npos) || (temp.find('?') != string::npos)));
+}
+
+bool _isBackgroundComamnd(const char *cmd_line);
+
+void _removeBackgroundSign(char *cmd_line);
+
+bool isRedirected(const char *Commandline)
+{
+  string temp(Commandline);
+  return ((temp.find('>') != string::npos) || (temp.find('>>') != string::npos) || (temp.find('|') != string::npos) || (temp.find('|&') != string::npos));
+}
+
+char *bashArgsPreperation(const std::string &cmd)
+{
+  if (_isBackgroundComamnd(cmd.c_str()))
+  {
+    char *c = strdup(cmd.c_str());
+    _removeBackgroundSign(c);
+    return c;
+  }
+  else
+    return strdup(cmd.c_str());
+}
+
+commandInfo splitCommand(const string &command, const string &splitter)
+{
+  // this will hold the splitted command in a vector where each elemnt will be a string that located between a beginning/splitter to end/splitter
+  commandInfo splittedCommandVector;
+  int start = 0;
+  int end = command.find(splitter);
+  // now we have the first command
+  while (end != std::string::npos)
+  {
+    splittedCommandVector.push_back(command.substr(start, end - start));
+    // now we update the start and end for the next command
+    start = end + splitter.length();
+    // find the next splitter
+    end = command.find(splitter, start);
+  }
+  // the last command wont have a splitte after it, special case
+  splittedCommandVector.push_back(command.substr(start, end - start));
+  return splittedCommandVector;
 }
 
 //////// functions from the course
@@ -116,17 +161,6 @@ void _removeBackgroundSign(char *cmd_line)
   cmd_line[str.find_last_not_of(WHITESPACE, idx) + 1] = 0;
 }
 
-char *prepareArgsForBash(const std::string &cmd)
-{
-  if (_isBackgroundComamnd(cmd.c_str()))
-  {
-    char *c = strdup(cmd.c_str());
-    _removeBackgroundSign(c);
-    return c;
-  }
-  else
-    return strdup(cmd.c_str());
-}
 Command::~Command() {}
 
 /// ChpromptCommand
@@ -434,7 +468,7 @@ void ExternalCommand::execute()
       {
         perror("smash error: setgrp() failed");
       }
-      char *args[4] = {(char *)"/bin/bash", (char *)"-c", prepareArgsForBash(cmdLine), NULL};
+      char *args[4] = {(char *)"/bin/bash", (char *)"-c", bashArgsPreperation(cmdLine), NULL};
       if (execv(args[0], args) == -1)
       {
         perror("smash error: execv failed");
@@ -468,7 +502,7 @@ void ExternalCommand::execute()
       {
         perror("smash error: setgrp() failed");
       }
-      char *args[4] = {(char *)"/bin/bash", (char *)"-c", prepareArgsForBash(cmdLine), NULL};
+      char *args[4] = {(char *)"/bin/bash", (char *)"-c", bashArgsPreperation(cmdLine), NULL};
       if (execvp(args[0], args) == -1)
       {
         perror("smash error: execvp failed");
@@ -478,6 +512,97 @@ void ExternalCommand::execute()
     {
       perror("smash error: fork failed");
     }
+  }
+}
+RedirectionCommand::RedirectionCommand(commandInfo &cmdInfoInput, const char *cmd_line) : cmdInfo(cmdInfoInput), cmdLine(cmd_line)
+{
+  // first of all we go over our command vector and check for either < or <<
+  int indexOfOperator = 0;
+  for (std::string &i : cmdInfo)
+  {
+    if (i.compare(">") == 0 || i.compare(">>") == 0)
+    {
+      this->commandOperator = i;
+      break;
+    }
+
+    indexOfOperator += 1;
+  }
+
+  this->targetFile = cmdInfo[indexOfOperator + 1];
+
+  this->splittedCommand = splitCommand(cmd_line, this->commandOperator);
+}
+
+void RedirectionCommand::prepare()
+{
+}
+void RedirectionCommand::execute()
+{
+  if (this->commandOperator.compare(">") == 0)
+  {
+    int original_stdout_fd = dup(1);
+
+    int temp_fd = open(this->targetFile.c_str(), O_CREAT | O_WRONLY | O_TRUNC, 0666);
+    if (temp_fd == -1)
+    {
+      perror("smash error: open failed");
+    }
+
+    if (dup2(temp_fd, 1) == -1)
+    {
+      perror("smash error: open failed");
+    }
+
+    Command *cmd = SMASH.CreateCommand(splittedCommand[0].c_str());
+    cmd->execute();
+    delete cmd;
+
+    if (dup2(original_stdout_fd, 1) == -1)
+    {
+      perror("smash error: open failed");
+    }
+
+    close(temp_fd);
+  }
+  else if (this->commandOperator.compare(">>") == 0)
+  {
+    int original_stdout_fd = dup(1);
+
+    int temp_fd = open(this->targetFile.c_str(), O_CREAT|O_WRONLY|O_APPEND, 0666);
+    if (temp_fd == -1)
+    {
+      perror("smash error: open failed");
+    }
+
+    if (dup2(temp_fd, 1) == -1)
+    {
+      perror("smash error: open failed");
+    }
+
+    Command *cmd = SMASH.CreateCommand(splittedCommand[0].c_str());
+    cmd->execute();
+    delete cmd;
+
+    if (dup2(original_stdout_fd, 1) == -1)
+    {
+      perror("smash error: open failed");
+    }
+
+    close(temp_fd);
+  }
+}
+
+void RedirectionCommand::fixFileName()
+{
+  // use provided _removebackground function to make sure we dont have & incase we are working with > or >> operators
+  if (this->commandOperator.compare(">") == 0 || this->commandOperator.compare(">>") == 0)
+  {
+    // remove &
+    char *tmp = strdup(this->commandOperator.c_str());
+    _removeBackgroundSign(tmp);
+    this->targetFile = tmp;
+    return;
   }
 }
 
@@ -534,6 +659,7 @@ Command *SmallShell::CreateCommand(const char *cmd_line)
   {
     CommandLine[i] = nullptr;
   }
+  bool isRedirectedCommand = isRedirected(cmd_line);
   int words = _parseCommandLine(cmd_line, CommandLine);
   bool isBackgroundCommandInput = _isBackgroundComamnd(cmd_line);
   commandInfo commandVector = convertToVector(CommandLine);
@@ -541,6 +667,10 @@ Command *SmallShell::CreateCommand(const char *cmd_line)
   for (int i = 0; i < words; ++i)
   {
     free(CommandLine[i]);
+  }
+  if (isRedirectedCommand)
+  {
+    return new RedirectionCommand(commandVector, cmd_line);
   }
   if (commandVector[0].compare("chprompt") == 0)
   {
