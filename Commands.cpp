@@ -42,16 +42,6 @@ bool isInteger(string s)
   return true;
 }
 
-// bool isInteger(const std::string &str)
-// {
-//   std::istringstream iss(str);
-//   int number;
-//   char leftover;
-//   if ((iss >> number) && !(iss >> leftover))
-//     return true;
-//   return false;
-// }
-
 // convert the input commandline into a vector of strings
 commandInfo convertToVector(char **CommandLine)
 {
@@ -84,7 +74,7 @@ bool isRedirected(const char *Commandline)
 {
   // check if the command is redirected, i/o pipe
   string temp(Commandline);
-  return ((temp.find('>') != string::npos) || (temp.find('>>') != string::npos) || (temp.find('|') != string::npos) || (temp.find('|&') != string::npos));
+  return ((temp.find(">") != string::npos) || (temp.find(">>") != string::npos) || (temp.find("|") != string::npos) || (temp.find("|&") != string::npos));
 }
 
 // incase of a background command we need to strip the & before sending it to bash
@@ -363,7 +353,7 @@ void JobsCommand::execute()
 }
 // ForeGround Command
 
-ForegroundCommand::ForegroundCommand(commandInfo &cmdInfo) : jobHolder(-100)
+ForegroundCommand::ForegroundCommand(commandInfo &cmdInfo) : jobHolder(0), validFgCommand(false)
 {
   if (cmdInfo.size() == 1)
   {
@@ -382,7 +372,7 @@ ForegroundCommand::ForegroundCommand(commandInfo &cmdInfo) : jobHolder(-100)
     SMASH.smashError("fg: invalid arguments");
     return;
   }
-  //check if the job id is in our jobs list
+  // check if the job id is in our jobs list
   if (!SMASH.getJobList()->getJobById(std::stoi(cmdInfo[1])))
   {
     cout << "smash error: fg: job-id " << cmdInfo[1] << " does not exist";
@@ -390,22 +380,23 @@ ForegroundCommand::ForegroundCommand(commandInfo &cmdInfo) : jobHolder(-100)
   }
   // if we reach here means the job id provided with the command meets all the requirements so we save it in jobholder as integer
   jobHolder = std::stoi(cmdInfo[1]);
+  validFgCommand = true;
 }
 
 void ForegroundCommand::execute()
 {
   // if we have errors we would return in the constructor before changing the jobHolder from how it was in the initialization list
-  if (jobHolder == -100)
+  if (!this->validFgCommand)
   {
     return;
   }
   int status;
-  //get the pid fro the job
+  // get the pid fro the job
   int pid = SMASH.getJobList()->getJobById(jobHolder)->getPid();
   std::string commandConcatenate = SMASH.getJobList()->getJobById(jobHolder)->getJobName();
-  //print job name with pid
+  // print job name with pid
   cout << commandConcatenate << " " << pid << endl;
-  //wait for job to finish 
+  // wait for job to finish
   waitpid(pid, &status, 0);
 }
 
@@ -415,10 +406,12 @@ QuitCommand::QuitCommand(commandInfo &cmdInfoInput) : cmdInfo(cmdInfoInput)
 }
 void QuitCommand::execute()
 {
+  // quit all
   if (cmdInfo.size() == 1)
   {
     exit(0);
   }
+  // if we have more than 1 argument make sure that the second one is kill
   auto temp = SMASH.getJobList()->getJobs();
   if (cmdInfo[1].compare("kill") == 0)
   {
@@ -426,7 +419,9 @@ void QuitCommand::execute()
     auto iter = temp.begin();
     while (iter != temp.end())
     {
+      // To Do: print the jobs that are being killed
       kill(iter->getPid(), SIGKILL);
+      iter ++;
     }
     exit(0);
   }
@@ -498,7 +493,7 @@ void ExternalCommand::execute()
     {
       if (setpgrp() == -1)
       {
-        perror("smash error: setgrp() failed");
+        perror("smash error: setgrp failed");
       }
       char *args[4] = {(char *)"/bin/bash", (char *)"-c", bashArgsPreperation(cmdLine), NULL};
       if (execv(args[0], args) == -1)

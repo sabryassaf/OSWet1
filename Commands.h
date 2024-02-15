@@ -25,10 +25,10 @@ public:
   virtual ~Command();
   virtual void execute() = 0;
   virtual string getCommandName() const { return this->commandName; }
-  virtual int getPidOfCommand() const { return getpid(); }
-  // virtual void prepare();
-  // virtual void cleanup();
-  //  TODO: Add your extra methods if needed
+  virtual int getPidOfCommand() const
+  {
+    return getpid();
+  }
 };
 
 class BuiltInCommand : public Command
@@ -94,6 +94,7 @@ class ForegroundCommand : public BuiltInCommand
 {
 private:
   int jobHolder;
+  bool validFgCommand;
 
 public:
   ForegroundCommand(commandInfo &cmdInfo);
@@ -227,6 +228,7 @@ private:
   commandInfo cmdInfo;
   int mode;
   std::string filePath;
+
 public:
   ChmodCommand(commandInfo &cmdInfo);
   virtual ~ChmodCommand() = default;
