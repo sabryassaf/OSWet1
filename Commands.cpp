@@ -214,7 +214,7 @@ void JobsList::printJobsList()
   // iterate over the jobs and print them as requested
   removeFinishedJobs();
   std::cout << std::endl;
-  auto iter = jobs.begin(); 
+  auto iter = jobs.begin();
   while (iter != jobs.end())
   {
     std::cout << "[" << iter->getId() << "]"
@@ -397,8 +397,15 @@ void ForegroundCommand::execute()
   std::string commandConcatenate = SMASH.getJobList()->getJobById(jobHolder)->getJobName();
   // print job name with pid
   cout << commandConcatenate << " " << pid << endl;
+  SMASH.setCurrentRunningPid(pid);
+  SMASH.setCurrentRunningJob(jobHolder);
   // wait for job to finish
-  waitpid(pid, &status, 0);
+  if (waitpid(pid, &status, 0) == -1)
+  {
+    perror("smash error: waitpid failed");
+  }
+  SMASH.setCurrentRunningPid(-1);
+  SMASH.setCurrentRunningJob(-1);
 }
 
 // Quit command
@@ -445,7 +452,7 @@ void KillCommand::execute()
     return;
   }
   JobsList::JobEntry *tmp = SMASH.getJobList()->getJobById(std::stoi(cmdInfo[2]));
-  //check  the job
+  // check  the job
   if (!tmp)
   {
     cout << "smash error: kill: job-id " << cmdInfo[2] << " does not exit" << endl;
@@ -454,14 +461,14 @@ void KillCommand::execute()
   int pid = tmp->getPid();
   int signal = -1 * std::stoi(cmdInfo[2]);
   int rc = kill(pid, signal);
-  //test if kill failed
+  // test if kill failed
   if (rc != 0)
   {
     perror("smash error: kill failed");
     return;
   }
   cout << "signal number " << cmdInfo[1] << " was sent to pid " << pid << endl;
-  //check which signal was sent to the job and update its status
+  // check which signal was sent to the job and update its status
   if (signal == SIGSTOP)
   {
     tmp->stopJob();
@@ -671,6 +678,8 @@ SmallShell::SmallShell() : prompt("smash")
   this->currentDirectory = getcwd(NULL, 0);
   this->lastDirectory = "";
   this->shellJobs = new JobsList();
+  this->currentRunningJob = -1;
+  this->currentrunningPid = -1;
 }
 
 void SmallShell::smashError(const std::string &error)

@@ -244,6 +244,8 @@ private:
   std::string currentDirectory;
   JobsList *shellJobs;
   SmallShell();
+  int currentrunningPid;
+  int currentRunningJob;
 
 public:
   Command *CreateCommand(const char *cmd_line);
@@ -262,6 +264,12 @@ public:
   std::string &getPrompt() { return this->prompt; };
 
   void setLastDirectory(std::string &newCd);
+
+  void setCurrentRunningPid(int pid) { this->currentrunningPid = pid; }
+  int getCurrentRunningPid() const { return this->currentrunningPid; }
+
+  void setCurrentRunningJob(int jobid){this->currentRunningJob = jobid;};
+  int getCurrentRunningJob() const { return this->currentRunningJob; }
 
   void printCurrentJobs()
   {
