@@ -213,7 +213,8 @@ void JobsList::printJobsList()
 {
   // iterate over the jobs and print them as requested
   removeFinishedJobs();
-  auto iter = jobs.begin();
+  std::cout << std::endl;
+  auto iter = jobs.begin(); 
   while (iter != jobs.end())
   {
     std::cout << "[" << iter->getId() << "]"
