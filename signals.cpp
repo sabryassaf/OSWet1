@@ -13,7 +13,7 @@ void ctrlCHandler(int sig_num)
   {
     return;
   }
-  cout << "smash:got ctrl-C" << endl;
+  cout << "smash: got ctrl-C" << endl;
   if (kill(SMASH.getCurrentRunningPid(), SIGKILL) == -1)
   {
     perror("smash error: kill failed");

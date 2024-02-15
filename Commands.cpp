@@ -18,20 +18,26 @@ const std::string WHITESPACE = " \n\r\t\f\v";
 #endif
 // helper functions
 
-bool isInteger(const std::string& str) {
-    if (str.empty()) return false;
+bool isInteger(const std::string &str)
+{
+    if (str.empty())
+        return false;
 
     int start = 0;
 
-    if (str[0] == '-') {
+    if (str[0] == '-')
+    {
         // A string containing only "-" is not an integer
-        if (str.size() == 1) return false;
+        if (str.size() == 1)
+            return false;
         start = 1;
     }
 
     // Check if all remaining characters are digits
-    for (size_t i = start; i < str.size(); ++i) {
-        if (!std::isdigit(str[i])) return false;
+    for (size_t i = start; i < str.size(); ++i)
+    {
+        if (!std::isdigit(str[i]))
+            return false;
     }
 
     return true;
@@ -361,24 +367,25 @@ ForegroundCommand::ForegroundCommand(commandInfo &cmdInfo) : jobHolder(0), valid
     {
         if (SMASH.getJobList()->isEmpty())
         {
-            SMASH.smashError("fg: jobs list is empty");
+            perror("smash error: fg: jobs list is empty");
             return;
         }
         // incase a job id wasnt provided with fg we use the last job inserted
         jobHolder = SMASH.getJobList()->getLastJob()->getId();
+        validFgCommand = true;
         return;
     }
     // incase the fg was provided with data, check if data is valid
     if (cmdInfo.size() > 2 || !isInteger(cmdInfo[1]))
     {
-        SMASH.smashError("fg: invalid arguments");
+        perror("smash error: fg: invalid arguments");
         return;
     }
     // check if the job id is in our jobs list
     if (!SMASH.getJobList()->getJobById(std::stoi(cmdInfo[1])))
     {
-        cout << "smash error: fg: job-id " << cmdInfo[1] << " does not exist";
-        return;
+        std::string error = "smash error: fg: job-id " + cmdInfo[1] + " does not exist";
+        perror(error.c_str());
     }
     // if we reach here means the job id provided with the command meets all the requirements so we save it in jobholder as integer
     jobHolder = std::stoi(cmdInfo[1]);
@@ -447,19 +454,37 @@ KillCommand::KillCommand(commandInfo &cmdInfoInput)
 
 void KillCommand::execute()
 {
+    bool jobIdValid = false;
+    if (cmdInfo.size() > 2)
+    {
+        for (auto &job : SMASH.getJobList()->getJobs())
+        {
+            if (job.getId() == std::stoi(cmdInfo[2]))
+
+            {
+                jobIdValid = true;
+                break;
+            }
+        }
+    }
+    if (!jobIdValid && cmdInfo.size()>2 && isInteger(cmdInfo[2]))
+    {
+        std::string tmpStr = "smash error: kill: job-id " + cmdInfo[2] + " does not exist";
+        std::cerr << "smash error: kill: job-id " << cmdInfo[2] << " does not exist" << std::endl;
+
+        // perror(tmpStr.c_str());
+        return;
+    }
+
     // check for valid arguemtns
-    if (cmdInfo.size() != 3 || !isInteger(cmdInfo[1]) || !isInteger(cmdInfo[2]))
+    if (cmdInfo.size() < 3 || !isInteger(cmdInfo[1]) || !isInteger(cmdInfo[2]))
     {
-        SMASH.smashError("kill: invalid arguments");
+        std::cerr << "smash error: kill: invalid arguments" << std::endl;
+        // perror("smash error: kill: invalid arguments");
         return;
     }
+
     JobsList::JobEntry *tmp = SMASH.getJobList()->getJobById(std::stoi(cmdInfo[2]));
-    // check  the job
-    if (!tmp)
-    {
-        cout << "smash error: kill: job-id " << cmdInfo[2] << " does not exit" << endl;
-        return;
-    }
     int pid = tmp->getPid();
     int signal = -1 * std::stoi(cmdInfo[1]);
     int rc = kill(pid, signal);
@@ -469,7 +494,7 @@ void KillCommand::execute()
         perror("smash error: kill failed");
         return;
     }
-    cout << "signal number " << cmdInfo[1] << " was sent to pid " << pid << endl;
+    cout << "signal number " << signal << " was sent to pid " << pid << endl;
     // check which signal was sent to the job and update its status
     if (signal == SIGSTOP)
     {
@@ -485,7 +510,7 @@ void KillCommand::execute()
 void ExternalCommand::execute()
 {
     int status = 0;
-    pid_t pid = fork();
+    int pid = fork();
     if (isComplex(this->cmdLine))
     {
         if (pid > 0)
@@ -511,10 +536,10 @@ void ExternalCommand::execute()
         {
             if (setpgrp() == -1)
             {
-                perror("smash error: setgrp failed");
+                perror("smash error: setpgrp failed");
             }
-            char *args[4] = {(char *)"/bin/bash", (char *)"-c", bashArgsPreperation(cmdLine), NULL};
-            if (execv(args[0], args) == -1)
+            char *args[4] = {(char *)"/bin/bash", (char *)"-c", bashArgsPreperation(cmdLine), nullptr};
+            if (execvp(args[0], args) == -1)
             {
                 perror("smash error: execv failed");
             }
@@ -545,9 +570,10 @@ void ExternalCommand::execute()
         {
             if (setpgrp() == -1)
             {
-                perror("smash error: setgrp() failed");
+                perror("smash error: setpgrp() failed");
             }
-            char *args[4] = {(char *)"/bin/bash", (char *)"-c", bashArgsPreperation(cmdLine), NULL};
+            cout<<cmdLine<<endl;
+            char *args[4] = {(char *)"/bin/bash", (char *)"-c", bashArgsPreperation(cmdLine), nullptr};
             if (execvp(args[0], args) == -1)
             {
                 perror("smash error: execvp failed");
@@ -661,7 +687,7 @@ ChmodCommand::ChmodCommand(commandInfo &commandInfoInput)
     // test for invalid arguments
     if (commandInfoInput.size() != 3 || !isInteger(commandInfoInput[1]) || commandInfoInput[1].length() > 4)
     {
-        SMASH.smashError("chmod: invalid arguments");
+        perror("chmod: invalid arguments");
         return;
     }
 
@@ -701,7 +727,7 @@ void SmallShell::setLastDirectory(std::string &newCd)
     {
         if (lastDirectory.empty())
         {
-            smashError("OLDPWD not set");
+            std::cerr<<"smash error: OLDPWD not set"<<endl;
             return;
         }
         if (chdir(lastDirectory.c_str()) == -1)
@@ -743,7 +769,8 @@ Command *SmallShell::CreateCommand(const char *cmd_line)
 
     for (int i = 0; i < words; ++i)
     {
-        free(CommandLine[i]);
+        if (CommandLine[i])
+            free(CommandLine[i]);
     }
     // if (commandVector[0].compare("timeout") == 0) {
     //     return new TimeOutCommand(commandVector, cmd_line);
@@ -772,7 +799,8 @@ Command *SmallShell::CreateCommand(const char *cmd_line)
     {
         if (commandVector.size() > 2)
         {
-            smashError("too many arguments");
+            std::cerr<<"smash error: too many arguments"<<endl;
+            return nullptr;
         }
         else
         {
