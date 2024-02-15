@@ -63,7 +63,7 @@ bool isComplex(const char *Commandline)
 {
     string temp(Commandline);
     // check if anyof the complex signs appear in our command line vector
-    return ((temp.find('*' != string::npos) || (temp.find('?') != string::npos)));
+    return ((temp.find("*") != string::npos) || (temp.find("?") != string::npos));
 }
 
 // define those funcion names to use them
@@ -539,6 +539,7 @@ void ExternalCommand::execute()
                 perror("smash error: setpgrp failed");
             }
             char *args[4] = {(char *)"/bin/bash", (char *)"-c", bashArgsPreperation(cmdLine), nullptr};
+            cout<<bashArgsPreperation(cmdLine)<<endl;
             if (execvp(args[0], args) == -1)
             {
                 perror("smash error: execv failed");
@@ -572,7 +573,6 @@ void ExternalCommand::execute()
             {
                 perror("smash error: setpgrp() failed");
             }
-            cout<<cmdLine<<endl;
             char *args[4] = {(char *)"/bin/bash", (char *)"-c", bashArgsPreperation(cmdLine), nullptr};
             if (execvp(args[0], args) == -1)
             {
