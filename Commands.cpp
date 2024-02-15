@@ -421,7 +421,7 @@ void QuitCommand::execute()
     {
       cout << iter->getPid() << ": " << iter->getCommand() << endl;
       kill(iter->getPid(), SIGKILL);
-      iter ++;
+      iter++;
     }
     exit(0);
   }
@@ -437,12 +437,14 @@ KillCommand::KillCommand(commandInfo &cmdInfoInput)
 
 void KillCommand::execute()
 {
-  if (cmdInfo.size() <= 1 || cmdInfo.size() > 3 || !isInteger(cmdInfo[1]) || !isInteger(cmdInfo[2]))
+  // check for valid arguemtns
+  if (cmdInfo.size() != 3 || !isInteger(cmdInfo[1]) || !isInteger(cmdInfo[2]))
   {
     SMASH.smashError("kill: invalid arguments");
     return;
   }
   JobsList::JobEntry *tmp = SMASH.getJobList()->getJobById(std::stoi(cmdInfo[2]));
+  //check  the job
   if (!tmp)
   {
     cout << "smash error: kill: job-id " << cmdInfo[2] << " does not exit" << endl;
@@ -451,12 +453,14 @@ void KillCommand::execute()
   int pid = tmp->getPid();
   int signal = -1 * std::stoi(cmdInfo[2]);
   int rc = kill(pid, signal);
+  //test if kill failed
   if (rc != 0)
   {
     perror("smash error: kill failed");
     return;
   }
   cout << "signal number " << cmdInfo[1] << " was sent to pid " << pid << endl;
+  //check which signal was sent to the job and update its status
   if (signal == SIGSTOP)
   {
     tmp->stopJob();
