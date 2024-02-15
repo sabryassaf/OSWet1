@@ -419,7 +419,7 @@ void QuitCommand::execute()
     auto iter = temp.begin();
     while (iter != temp.end())
     {
-      // To Do: print the jobs that are being killed
+      cout << iter->getPid() << ": " << iter->getCommand() << endl;
       kill(iter->getPid(), SIGKILL);
       iter ++;
     }
