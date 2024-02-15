@@ -5,7 +5,14 @@
 #include <string>
 #include <list>
 #include <sys/wait.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include <unistd.h>
+#include <iomanip>
+#include <queue>
+#include <iostream>
+#include <sstream>
 
 #define COMMAND_ARGS_MAX_LENGTH (200)
 #define COMMAND_MAX_ARGS (20)
@@ -233,6 +240,34 @@ public:
   ChmodCommand(commandInfo &cmdInfo);
   virtual ~ChmodCommand() = default;
   void execute() override;
+};
+
+/// BONUS: TIMEDOUT CLASS
+class TimedJob {
+    int TJId;
+    int timeout;
+    time_t deathTime;
+public:
+    TimedJob(int jobIDInput, int timeoutInput) : TJId(jobIDInput), timeout(timeoutInput),
+                                                        deathTime(time(nullptr)+timeoutInput){};
+    bool operator()(const TimedJob& lhs, const TimedJob& rhs);
+    int getTimedJobId() const {return TJId;}
+    time_t getDeathTime() const {return deathTime;}
+};
+
+class TimeOutCommand : public Command {
+    static std::priority_queue<TimedJob, std::vector<TimedJob>, TimedJob> timeQ;
+    string cmdTInfo;
+    int timeout;
+    bool isBackGround;
+public:
+    TimeOutCommand() {}
+    TimeOutCommand(commandInfo& cmdInfo, const char* origin);
+    virtual ~TimeOutCommand() {}
+    void execute() override;
+    static void setAlarm();
+    static void consumeAlarm();
+
 };
 
 class SmallShell
