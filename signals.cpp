@@ -16,6 +16,7 @@ void ctrlCHandler(int sig_num)
   if (kill(SMASH.getCurrentRunningPid(), SIGKILL) == -1)
   {
     perror("smash error: kill failed");
+    return;
   }
   else
   {

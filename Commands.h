@@ -199,7 +199,7 @@ public:
     bool finished;
 
   public:
-    JobEntry(int id, int pid, const string &name) : id(id), pid(pid), jobName(name), finished(false) {}
+    JobEntry(int id, int pid, const string &name) : id(id), pid(pid), jobName(name), finished(false){}
     int getId() const;
     int getPid() const;
     const string &getCommand() const;

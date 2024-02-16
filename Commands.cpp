@@ -20,27 +20,20 @@ const std::string WHITESPACE = " \n\r\t\f\v";
 
 bool isInteger(const std::string &str)
 {
-    if (str.empty())
-        return false;
-
-    int start = 0;
-
-    if (str[0] == '-')
+    try
     {
-        // A string containing only "-" is not an integer
-        if (str.size() == 1)
-            return false;
-        start = 1;
+        size_t pos;
+        int num = std::stoi(str, &pos);
+        // Check if the whole string was converted
+        if (pos == str.length())
+        {
+            return true;
+        }
     }
-
-    // Check if all remaining characters are digits
-    for (size_t i = start; i < str.size(); ++i)
+    catch (const std::invalid_argument &e)
     {
-        if (!std::isdigit(str[i]))
-            return false;
     }
-
-    return true;
+    return false;
 }
 
 // convert the input commandline into a vector of strings
@@ -222,7 +215,9 @@ void JobsList::printJobsList()
     while (iter != jobs.end())
     {
         std::cout << "[" << iter->getId() << "]"
-                  << " " << iter->getCommand() << std::endl;
+                  << " " << iter->getJobName() << endl;
+        //           << " " << iter->getCommand() << std::endl;
+        // std::cout << commandLineString << std::endl;
         ++iter;
     }
 }
@@ -470,54 +465,58 @@ KillCommand::KillCommand(commandInfo &cmdInfoInput)
 void KillCommand::execute()
 {
     bool jobIdValid = false;
-    if (cmdInfo.size() > 2)
+    if (cmdInfo.size() < 3 || !isInteger(cmdInfo[2]))
     {
-        for (auto &job : SMASH.getJobList()->getJobs())
-        {
-            if (job.getId() == std::stoi(cmdInfo[2]))
+        std::cerr << "smash error: kill: invalid arguments" << std::endl;
+        return;
+    }
 
-            {
-                jobIdValid = true;
-                break;
-            }
+    for (auto &job : SMASH.getJobList()->getJobs())
+    {
+        if (job.getId() == std::stoi(cmdInfo[2]))
+        {
+            jobIdValid = true;
+            break;
         }
     }
-    if (!jobIdValid && cmdInfo.size() > 2 && isInteger(cmdInfo[2]))
+    if (!jobIdValid)
     {
         std::string tmpStr = "smash error: kill: job-id " + cmdInfo[2] + " does not exist";
         std::cerr << "smash error: kill: job-id " << cmdInfo[2] << " does not exist" << std::endl;
-
-        // perror(tmpStr.c_str());
         return;
     }
-
-    // check for valid arguemtns
-    if (cmdInfo.size() < 3 || !isInteger(cmdInfo[1]) || !isInteger(cmdInfo[2]))
-    {
-        std::cerr << "smash error: kill: invalid arguments" << std::endl;
-        // perror("smash error: kill: invalid arguments");
-        return;
-    }
-
     JobsList::JobEntry *tmp = SMASH.getJobList()->getJobById(std::stoi(cmdInfo[2]));
     int pid = tmp->getPid();
-    int signal = -1 * std::stoi(cmdInfo[1]);
-    int rc = kill(pid, signal);
-    // test if kill failed
-    if (rc != 0)
+    if (isInteger(cmdInfo[1]))
     {
-        perror("smash error: kill failed");
+        int signal = -1 * std::stoi(cmdInfo[1]);
+        if (signal < 0)
+        {
+            std::cerr << "smash error: kill: invalid arguments" << std::endl;
+            return;
+        }
+        int rc = kill(pid, signal);
+        // test if kill failed
+        if (rc != 0)
+        {
+            perror("smash error: kill failed");
+            return;
+        }
+        cout << "signal number " << signal << " was sent to pid " << pid << endl;
+        // check which signal was sent to the job and update its status
+        if (signal == SIGSTOP)
+        {
+            tmp->stopJob();
+        }
+        else if (signal == SIGCONT)
+        {
+            tmp->continueJob();
+        }
+    }
+    else
+    {
+        std::cerr << "smash error: kill: invalid arguments" << std::endl;
         return;
-    }
-    cout << "signal number " << signal << " was sent to pid " << pid << endl;
-    // check which signal was sent to the job and update its status
-    if (signal == SIGSTOP)
-    {
-        tmp->stopJob();
-    }
-    else if (signal == SIGCONT)
-    {
-        tmp->continueJob();
     }
 }
 
@@ -533,7 +532,7 @@ void ExternalCommand::execute()
             if (isBackGroundComamnd)
             {
                 std::string commandConcatenate = cmdInfo[0] + " " + cmdInfo[1];
-                SMASH.getJobList()->addJob(commandConcatenate, pid);
+                SMASH.getJobList()->addJob(cmdLine, pid);
             }
             else
             {
@@ -542,27 +541,32 @@ void ExternalCommand::execute()
                 if (waitpid(pid, &status, WSTOPPED) == -1)
                 {
                     perror("smash error: waitpid failed");
+                    return;
                 }
                 SMASH.setCurrentRunningPid(-1);
                 SMASH.setCurrentRunningJob(-1);
             }
+            return;
         }
         else if (pid == 0)
         {
             if (setpgrp() == -1)
             {
                 perror("smash error: setpgrp failed");
+                return;
             }
-            char *args[4] = {(char *)"/bin/bash", (char *)"-c", bashArgsPreperation(cmdLine), nullptr};
-            cout << bashArgsPreperation(cmdLine) << endl;
-            if (execvp(args[0], args) == -1)
+            char *args[4] = {"/bin/bash", "-c", bashArgsPreperation(cmdLine), nullptr};
+            if (execv(args[0], args) == -1)
             {
                 perror("smash error: execv failed");
+                return;
             }
+            return;
         }
         else
         {
             perror("smash error: fork failed");
+            return;
         }
     }
     else
@@ -572,31 +576,41 @@ void ExternalCommand::execute()
             if (isBackGroundComamnd)
             {
                 std::string commandConcatenate = cmdInfo[0] + " " + cmdInfo[1];
-                SMASH.getJobList()->addJob(commandConcatenate, pid);
+                SMASH.getJobList()->addJob(this->cmdLine, pid);
             }
             else
             {
+                SMASH.setCurrentRunningPid(pid);
+                SMASH.setCurrentRunningJob(-1);
                 if (waitpid(pid, &status, WSTOPPED) == -1)
                 {
                     perror("smash error: waitpid failed");
+                    return;
                 }
+                SMASH.setCurrentRunningPid(-1);
+                SMASH.setCurrentRunningJob(-1);
             }
+            return;
         }
         else if (pid == 0)
         {
             if (setpgrp() == -1)
             {
-                perror("smash error: setpgrp() failed");
+                perror("smash error: setpgrp failed");
+                return;
             }
-            char *args[4] = {(char *)"/bin/bash", (char *)"-c", bashArgsPreperation(cmdLine), nullptr};
+
+            char *args[4] = {"/bin/bash", "-c", bashArgsPreperation(cmdLine), nullptr};
             if (execvp(args[0], args) == -1)
             {
                 perror("smash error: execvp failed");
+                exit(1);
             }
         }
         else
         {
             perror("smash error: fork failed");
+            return;
         }
     }
 }
@@ -755,6 +769,7 @@ void SmallShell::setLastDirectory(std::string &newCd)
         lastDirectory = temp;
         return;
     }
+
     if (chdir(newCd.c_str()) == -1)
     {
         perror("smash error: chdir failed");
@@ -846,7 +861,7 @@ Command *SmallShell::CreateCommand(const char *cmd_line)
     {
         return new ChmodCommand(commandVector);
     }
-
+    this->getJobList()->removeFinishedJobs();
     return new ExternalCommand(commandVector, isBackgroundCommandInput, cmd_line);
 }
 
