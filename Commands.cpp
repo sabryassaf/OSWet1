@@ -467,7 +467,7 @@ void KillCommand::execute()
             }
         }
     }
-    if (!jobIdValid && cmdInfo.size()>2 && isInteger(cmdInfo[2]))
+    if (!jobIdValid && cmdInfo.size() > 2 && isInteger(cmdInfo[2]))
     {
         std::string tmpStr = "smash error: kill: job-id " + cmdInfo[2] + " does not exist";
         std::cerr << "smash error: kill: job-id " << cmdInfo[2] << " does not exist" << std::endl;
@@ -539,7 +539,7 @@ void ExternalCommand::execute()
                 perror("smash error: setpgrp failed");
             }
             char *args[4] = {(char *)"/bin/bash", (char *)"-c", bashArgsPreperation(cmdLine), nullptr};
-            cout<<bashArgsPreperation(cmdLine)<<endl;
+            cout << bashArgsPreperation(cmdLine) << endl;
             if (execvp(args[0], args) == -1)
             {
                 perror("smash error: execv failed");
@@ -727,7 +727,7 @@ void SmallShell::setLastDirectory(std::string &newCd)
     {
         if (lastDirectory.empty())
         {
-            std::cerr<<"smash error: OLDPWD not set"<<endl;
+            std::cerr << "smash error: OLDPWD not set" << endl;
             return;
         }
         if (chdir(lastDirectory.c_str()) == -1)
@@ -764,6 +764,10 @@ Command *SmallShell::CreateCommand(const char *cmd_line)
     }
     bool isRedirectedCommand = isRedirected(cmd_line);
     int words = _parseCommandLine(cmd_line, CommandLine);
+    if (words == 0)
+    {
+        return nullptr;
+    }
     bool isBackgroundCommandInput = _isBackgroundComamnd(cmd_line);
     commandInfo commandVector = convertToVector(CommandLine);
 
@@ -799,7 +803,7 @@ Command *SmallShell::CreateCommand(const char *cmd_line)
     {
         if (commandVector.size() > 2)
         {
-            std::cerr<<"smash error: too many arguments"<<endl;
+            std::cerr << "smash error: too many arguments" << endl;
             return nullptr;
         }
         else

@@ -8,12 +8,11 @@ using namespace std;
 
 void ctrlCHandler(int sig_num)
 {
-
+  cout << "smash: got ctrl-C" << endl;
   if (SMASH.getCurrentRunningPid() == -1)
   {
     return;
   }
-  cout << "smash: got ctrl-C" << endl;
   if (kill(SMASH.getCurrentRunningPid(), SIGKILL) == -1)
   {
     perror("smash error: kill failed");
