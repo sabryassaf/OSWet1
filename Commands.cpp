@@ -286,6 +286,7 @@ JobsList::JobEntry *JobsList::getJobById(int jobId)
         }
         ++iter;
     }
+    return nullptr;
 }
 
 void JobsList::removeJobById(int jobId)
@@ -363,11 +364,24 @@ void JobsCommand::execute()
 
 ForegroundCommand::ForegroundCommand(commandInfo &cmdInfo) : jobHolder(0), validFgCommand(false)
 {
+    if (cmdInfo.size() > 1)
+    {
+
+        if (isInteger(cmdInfo[1]))
+        {
+            if (!SMASH.getJobList()->getJobById(std::stoi(cmdInfo[1])))
+            {
+                std::string error = "smash error: fg: job-id " + cmdInfo[1] + " does not exist";
+                cerr << error << endl;
+                return;
+            }
+        }
+    }
     if (cmdInfo.size() == 1)
     {
         if (SMASH.getJobList()->isEmpty())
         {
-            perror("smash error: fg: jobs list is empty");
+            cerr << "smash error: fg: jobs list is empty" << endl;
             return;
         }
         // incase a job id wasnt provided with fg we use the last job inserted
@@ -378,14 +392,15 @@ ForegroundCommand::ForegroundCommand(commandInfo &cmdInfo) : jobHolder(0), valid
     // incase the fg was provided with data, check if data is valid
     if (cmdInfo.size() > 2 || !isInteger(cmdInfo[1]))
     {
-        perror("smash error: fg: invalid arguments");
+        cerr << "smash error: fg: invalid arguments" << endl;
         return;
     }
     // check if the job id is in our jobs list
     if (!SMASH.getJobList()->getJobById(std::stoi(cmdInfo[1])))
     {
         std::string error = "smash error: fg: job-id " + cmdInfo[1] + " does not exist";
-        perror(error.c_str());
+        cerr << error << endl;
+        return;
     }
     // if we reach here means the job id provided with the command meets all the requirements so we save it in jobholder as integer
     jobHolder = std::stoi(cmdInfo[1]);
@@ -727,7 +742,7 @@ void SmallShell::setLastDirectory(std::string &newCd)
     {
         if (lastDirectory.empty())
         {
-            std::cerr << "smash error: OLDPWD not set" << endl;
+            std::cerr << "smash error: cd: OLDPWD not set" << endl;
             return;
         }
         if (chdir(lastDirectory.c_str()) == -1)
@@ -803,7 +818,7 @@ Command *SmallShell::CreateCommand(const char *cmd_line)
     {
         if (commandVector.size() > 2)
         {
-            std::cerr << "smash error: too many arguments" << endl;
+            std::cerr << "smash error: cd: too many arguments" << endl;
             return nullptr;
         }
         else
