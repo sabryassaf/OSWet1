@@ -1,6 +1,7 @@
 #include "Commands.h"
+#include <fstream>
 
-#define MAX_ARGUMENTS 25
+#define MAX_ARGUMENTS 20
 using namespace std;
 typedef std::vector<std::string> commandInfo;
 #define SMASH SmallShell::getInstance()
@@ -555,7 +556,8 @@ void ExternalCommand::execute()
                 perror("smash error: setpgrp failed");
                 return;
             }
-            char *args[4] = {"/bin/bash", "-c", bashArgsPreperation(cmdLine), nullptr};
+
+            char *args[4] = {"/bin/bash", "-c", (char *)cmdLine, nullptr};
             if (execv(args[0], args) == -1)
             {
                 perror("smash error: execv failed");
@@ -600,8 +602,16 @@ void ExternalCommand::execute()
                 return;
             }
 
-            char *args[4] = {"/bin/bash", "-c", bashArgsPreperation(cmdLine), nullptr};
-            if (execvp(args[0], args) == -1)
+            char* args[MAX_ARGUMENTS+1];
+            int words = _parseCommandLine(bashArgsPreperation(cmdLine),args);
+            args[words] = nullptr;
+            // for (int i = 0; i <= words; i++){
+            //     if (args[i] == nullptr){
+            //         cout << "NULL!!!!!!" << std::endl;
+            //     }
+            //     cout << args[i] << std::endl;
+            // }
+            if (execvp(args[0],args) == -1)
             {
                 perror("smash error: execvp failed");
                 exit(1);
