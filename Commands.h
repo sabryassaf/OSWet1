@@ -155,14 +155,6 @@ public:
   void execute() override;
 };
 
-class PipeCommand : public Command
-{
-  // TODO: Add your data members
-public:
-  PipeCommand(const char *cmd_line);
-  virtual ~PipeCommand() {}
-  void execute() override;
-};
 
 class RedirectionCommand : public Command
 {
@@ -269,6 +261,15 @@ public:
 //     static void consumeAlarm();
 
 // };
+
+class PipeCommand : public Command {
+    string line;
+public:
+    PipeCommand(const char* cmdLine) : Command(cmdLine), line(cmdLine) {}
+    virtual ~PipeCommand() = default;
+    void execute() override;
+};
+
 
 class SmallShell
 {
