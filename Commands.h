@@ -155,7 +155,6 @@ public:
   void execute() override;
 };
 
-
 class RedirectionCommand : public Command
 {
   commandInfo cmdInfo;
@@ -191,7 +190,7 @@ public:
     bool finished;
 
   public:
-    JobEntry(int id, int pid, const string &name) : id(id), pid(pid), jobName(name), finished(false){}
+    JobEntry(int id, int pid, const string &name) : id(id), pid(pid), jobName(name), finished(false) {}
     int getId() const;
     int getPid() const;
     const string &getCommand() const;
@@ -262,14 +261,16 @@ public:
 
 // };
 
-class PipeCommand : public Command {
-    string line;
-public:
-    PipeCommand(const char* cmdLine) : Command(cmdLine), line(cmdLine) {}
-    virtual ~PipeCommand() = default;
-    void execute() override;
-};
+class PipeCommand : public Command
+{
+  string line;
+  const char *cmdLine;
 
+public:
+  PipeCommand(const char *cmdLine) : cmdLine(cmdLine), line(cmdLine) {}
+  virtual ~PipeCommand() = default;
+  void execute() override;
+};
 
 class SmallShell
 {
@@ -304,7 +305,7 @@ public:
   void setCurrentRunningPid(int pid) { this->currentrunningPid = pid; }
   int getCurrentRunningPid() const { return this->currentrunningPid; }
 
-  void setCurrentRunningJob(int jobid){this->currentRunningJob = jobid;};
+  void setCurrentRunningJob(int jobid) { this->currentRunningJob = jobid; };
   int getCurrentRunningJob() const { return this->currentRunningJob; }
 
   void printCurrentJobs()
