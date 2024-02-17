@@ -263,11 +263,10 @@ public:
 
 class PipeCommand : public Command
 {
-  string line;
   const char *cmdLine;
 
 public:
-  PipeCommand(const char *cmdLine) : cmdLine(cmdLine), line(cmdLine) {}
+  PipeCommand(const char *cmdLine) : cmdLine(cmdLine) {}
   virtual ~PipeCommand() = default;
   void execute() override;
 };

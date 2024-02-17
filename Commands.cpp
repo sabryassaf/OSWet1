@@ -813,62 +813,63 @@ Command *SmallShell::CreateCommand(const char *cmd_line)
         // if (commandVector[0].compare("timeout") == 0) {
         //     return new TimeOutCommand(commandVector, cmd_line);
         // }
-        if (isRedirectedCommand)
-        {
-            return new RedirectionCommand(commandVector, cmd_line);
-        }
-        if (commandVector[0].compare("chprompt") == 0)
-        {
-            if (commandVector.size() == 1)
-            {
-                return new ChprompotCommand();
-            }
-            return new ChprompotCommand(commandVector[1]);
-        }
-        if (commandVector[0].compare("showpid") == 0)
-        {
-            return new ShowPidCommand();
-        }
-        if (commandVector[0].compare("pwd") == 0)
-        {
-            return new pwdCommand();
-        }
-        if (commandVector[0].compare("cd") == 0)
-        {
-            if (commandVector.size() > 2)
-            {
-                std::cerr << "smash error: cd: too many arguments" << endl;
-                return nullptr;
-            }
-            else
-            {
-                return new CdCommand(commandVector[1]);
-            }
-        }
-        if (commandVector[0].compare("jobs") == 0)
-        {
-            return new JobsCommand(commandVector);
-        }
-        if (commandVector[0].compare("fg") == 0)
-        {
-            return new ForegroundCommand(commandVector);
-        }
-        if (commandVector[0].compare("quit") == 0)
-        {
-            return new QuitCommand(commandVector);
-        }
-        if (commandVector[0].compare("kill") == 0)
-        {
-            return new KillCommand(commandVector);
-        }
-        if (commandVector[0].compare("chmod") == 0)
-        {
-            return new ChmodCommand(commandVector);
-        }
-        this->getJobList()->removeFinishedJobs();
-        return new ExternalCommand(commandVector, isBackgroundCommandInput, cmd_line);
     }
+    if (isRedirectedCommand)
+    {
+        return new RedirectionCommand(commandVector, cmd_line);
+    }
+    if (commandVector[0].compare("chprompt") == 0)
+    {
+        if (commandVector.size() == 1)
+        {
+            return new ChprompotCommand();
+        }
+        return new ChprompotCommand(commandVector[1]);
+    }
+    if (commandVector[0].compare("showpid") == 0)
+    {
+        return new ShowPidCommand();
+    }
+    if (commandVector[0].compare("pwd") == 0)
+    {
+        return new pwdCommand();
+    }
+    if (commandVector[0].compare("cd") == 0)
+    {
+        if (commandVector.size() > 2)
+        {
+            std::cerr << "smash error: cd: too many arguments" << endl;
+            return nullptr;
+        }
+        else
+        {
+            return new CdCommand(commandVector[1]);
+        }
+    }
+    if (commandVector[0].compare("jobs") == 0)
+    {
+        return new JobsCommand(commandVector);
+    }
+    if (commandVector[0].compare("fg") == 0)
+    {
+        return new ForegroundCommand(commandVector);
+    }
+    if (commandVector[0].compare("quit") == 0)
+    {
+        return new QuitCommand(commandVector);
+    }
+    if (commandVector[0].compare("kill") == 0)
+    {
+        return new KillCommand(commandVector);
+    }
+    if (commandVector[0].compare("chmod") == 0)
+    {
+        return new ChmodCommand(commandVector);
+    }
+    this->getJobList()->removeFinishedJobs();
+    return new ExternalCommand(commandVector, isBackgroundCommandInput, cmd_line);
 }
+
 void SmallShell::executeCommand(const char *cmd_line)
 {
     shellJobs->removeFinishedJobs();
@@ -962,8 +963,9 @@ void PipeCommand::execute()
 {
     bool errorCH = true;
     int tmpPipe[2];
-    string firstCmd = line.substr(0,line.find_first_of('|'));
-    string secCmd = line.substr(line.find_first_of('|')+1,std::string::npos);
+    std::string line = this->cmdLine;
+    string firstCmd = line.substr(0, line.find_first_of('|'));
+    string secCmd = line.substr(line.find_first_of('|') + 2, std::string::npos);
     if (line.find('&') == string::npos)
     {
         errorCH = false;
