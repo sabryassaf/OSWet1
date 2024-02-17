@@ -1,5 +1,4 @@
 #include "Commands.h"
-#include <fstream>
 
 #define MAX_ARGUMENTS 20
 using namespace std;
@@ -605,12 +604,6 @@ void ExternalCommand::execute()
             char* args[MAX_ARGUMENTS+1];
             int words = _parseCommandLine(bashArgsPreperation(cmdLine),args);
             args[words] = nullptr;
-            // for (int i = 0; i <= words; i++){
-            //     if (args[i] == nullptr){
-            //         cout << "NULL!!!!!!" << std::endl;
-            //     }
-            //     cout << args[i] << std::endl;
-            // }
             if (execvp(args[0],args) == -1)
             {
                 perror("smash error: execvp failed");
@@ -888,86 +881,8 @@ void SmallShell::executeCommand(const char *cmd_line)
     {
         cmd->execute();
     }
-    // Please note that you must fork smash process for some commands (e.g., external commands....)
 }
 
-/// BONUS: TIMEOUT FUNCTION :)
-
-// bool TimedJob::operator()(const TimedJob &rhs, const TimedJob &lhs) {
-//     bool diffTime = ((difftime(lhs.deathTime, rhs.deathTime) >= 0));
-//     return diffTime;
-// }
-
-// ////////// SOMETHING IS WRONG NEED TO BE FIXED.. HELP!!
-// std::priority_queue<TimedJob, std::vector<TimedJob>, TimedJob> TimeOutCommand::timeQ;
-
-// TimeOutCommand::TimeOutCommand(commandInfo &cmdInfo, const char *origin) {
-//     timeout = atoi(cmdInfo[1].c_str());
-//     isBackGround = _isBackgroundComamnd(cmdInfo[cmdInfo.size() - 1].c_str());
-//     cmdTInfo = origin;
-// }
-
-// void TimeOutCommand::execute()
-// {
-//     int status = 0;
-//     int pid = fork();
-
-//     if (pid == 0)
-//     {
-//         setpgrp();
-//         char* args[] = { (char*) "/bin/bash", (char*) "-c", bashArgsPreperation(cmdTInfo), nullptr };
-//         if (execvp(args[0], args) == -1) {
-//             perror("smash error: execv failed");
-//         }
-//     }
-//     else if (pid > 0)
-//     {
-//         SMASH.getJobList()->addJob(cmdTInfo, pid);
-//         ///WHY MAROON DIDN'T USE THE PID
-//         timeQ.push(TimedJob(pid, timeout));
-//         if (timeQ.top().getTimedJobId() == pid) {
-//             TimeOutCommand::setAlarm();
-//         }
-//         if (!(_isBackgroundComamnd(cmdTInfo.c_str()))) {
-//             if (waitpid(pid, &status, WSTOPPED) == -1) {
-//                 perror("smash error: waitpid failed");
-//             }
-//         }
-//     }
-//     else {
-//         perror("smash error: fork failed");
-//     }
-// }
-
-// void TimeOutCommand::setAlarm() {
-//     if (!(timeQ.empty())) {
-//         alarm(difftime(timeQ.top().getDeathTime(), time(nullptr)));
-//     }
-// }
-
-// void TimeOutCommand::consumeAlarm() {
-//     if (!timeQ.empty()) {
-//         int jobId = SMASH.getJobList()->getJobById(timeQ.top().getTimedJobId())->getId();
-//         string cmd = SMASH.getJobList()->getJobById(timeQ.top().getTimedJobId())->getCommand();
-//         int status = -1;
-//         pid_t cpid = waitpid(jobId, &status, WNOHANG | WSTOPPED);
-
-//         if (cpid != 0) {
-//             timeQ.pop();
-//             SMASH.getJobList()->removeJobById(jobId);
-//             setAlarm();
-//             return;
-//         }
-//         if (kill(jobId, SIGKILL) != 0) {
-//             perror("smash error: Kill failed");
-//         }
-
-//         cout << "smash: " << cmd << " timed out!" << std::endl;
-//         timeQ.top();
-//         SMASH.getJobList()->removeJobById(jobId);
-//         TimeOutCommand::setAlarm();
-//     }
-// }
 
 void PipeCommand::execute()
 {
